@@ -111,6 +111,11 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Pull latest config
+        run: |
+          git fetch origin ${{ github.ref_name }} --depth=1 2>/dev/null || true
+          git checkout FETCH_HEAD -- .github/config/kernel_versions.json 2>/dev/null || true
+
       - name: Load Config
         id: cfg
         run: |
@@ -219,6 +224,7 @@ jobs:
           wait
           rm -f *.tar.gz
           rm -f common/android/abi_gki_protected_exports_* || true
+          [[ "${{ inputs.kernel_version }}" == "6.6" ]] && echo "device_find_any_child" >> common/android/abi_gki_aarch64_xiaomi || true
           sed -i 's/ -dirty//g' common/scripts/setlocalversion || true
           sed -i ':a; /#ifdef USE_PKCS11_ENGINE/{N;N;s/#ifdef USE_PKCS11_ENGINE\n\(.*\)\n#endif/\1/; ta}' common/certs/extract-cert.c || true
 
