@@ -76,33 +76,33 @@
       },
       "38": {
         "asb_date": "2025-09",
-        "default_r": "r37",
+        "default_r": "r38",
         "supported_r": [
-          "r37",
+          "r38",
           "none"
         ],
-        "commit": "7e082a418d84a78ab21e0b553282419217ac3885",
-        "commit_date": "2026-08-05 17:23:55 +0100"
+        "commit": "1b0462bd0618c9fa384498dce3d8c4476182bedf",
+        "commit_date": "2026-09-02 02:39:15 -0700"
       },
       "69": {
         "asb_date": "2026-03",
-        "default_r": "r65",
+        "default_r": "r66",
         "supported_r": [
-          "r65",
+          "r66",
           "none"
         ],
-        "commit": "538936ac1531c96684ca542f4099a7e14c7362bc",
+        "commit": "8d08bf215922936b577d1d2c415982dc86082a3c",
         "commit_date": "2026-08-26 19:25:42 -0700"
       },
       "81": {
         "asb_date": "2026-06",
-        "default_r": "r23",
+        "default_r": "r24",
         "supported_r": [
-          "r23",
+          "r24",
           "none"
         ],
-        "commit": "5360c214652c723e1d9c0b73aed0aebefc8b9e16",
-        "commit_date": "2026-08-28 01:09:30 -0700"
+        "commit": "b231f9ee4b2b260633b9ec5ee6cd116cc28c758d",
+        "commit_date": "2026-09-02 16:16:58 +0000"
       },
       "92": {
         "asb_date": "lts",
