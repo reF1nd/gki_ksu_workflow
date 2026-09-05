@@ -22,10 +22,6 @@ on:
       use_susfs:
         required: true
         type: boolean
-      susfs_repo:
-        required: false
-        type: string
-        default: 'GitLab'
       kowsu_branch:
         required: false
         type: string
@@ -46,9 +42,14 @@ on:
         required: false
         type: string
         default: 'backslashxx/KernelSU:master'
-      hook_mode:
+      resukisu_hook_mode:
         required: false
         type: string
+        default: 'manual'
+      kernelsu_xx_hook_mode:
+        required: false
+        type: string
+        default: 'branch link hijacking'
       ksu_debug:
         required: false
         type: boolean
@@ -292,68 +293,70 @@ jobs:
           grep -q "kernelsu" drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
           grep -q "drivers/kernelsu/Kconfig" drivers/Kconfig || sed -i '/endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
-      - name: Setup SUSFS
-        if: inputs.use_susfs
-        working-directory: kernel_workspace/common
-        env:
-          SUSFS_DIR: ${{ github.workspace }}/susfs4ksu
-          SUSFS_REPO: ${{ inputs.susfs_repo == 'GitHub' && 'https://github.com/midori01/susfs4ksu' || 'https://gitlab.com/simonpunk/susfs4ksu' }}
-          SUSFS_COMMIT: ${{ inputs.susfs_commit }}
-          KMI_VERSION: ${{ steps.cfg.outputs.kmi_version }}
-        run: |
-          [ -n "$SUSFS_COMMIT" ] && git clone "$SUSFS_REPO" "$SUSFS_DIR" || git clone --depth 1 --no-single-branch "$SUSFS_REPO" "$SUSFS_DIR"
-          git -C "$SUSFS_DIR" checkout "${SUSFS_COMMIT:-gki-$KMI_VERSION}"
-          cp "$SUSFS_DIR"/kernel_patches/fs/* fs/
-          cp "$SUSFS_DIR"/kernel_patches/include/linux/* include/linux/
-          if [ "${{ inputs.kernel_version }}" = "6.12" ]; then
-            PATCH_VER="$KMI_VERSION.${{ inputs.sub_level }}"
-            PATCH_DIR="${{ github.workspace }}/.github/patches/$KMI_VERSION"
-            if [ ! -f "$PATCH_DIR/50_add_susfs_in_gki-${PATCH_VER}.patch" ]; then
-              for p in $(ls -rv "$PATCH_DIR"/50_add_susfs_in_gki-${KMI_VERSION}.*.patch 2>/dev/null); do
-                if [ "$(basename "$p" .patch | awk -F. '{print $NF}')" -le "${{ inputs.sub_level }}" ]; then
-                  PATCH_VER=$(basename "$p" .patch | sed 's/50_add_susfs_in_gki-//')
-                  echo "Using fallback patch version: $PATCH_VER"
-                  break
-                fi
-              done
-            fi
-          else
-            PATCH_VER="$KMI_VERSION"
-          fi
-          case "${{ inputs.variant }}" in
-            KowSU)
-              bash "${{ github.workspace }}/.github/scripts/susfs_deinlined.sh" "${{ github.workspace }}/.github/patches/${{ steps.cfg.outputs.kmi_version }}/50_add_susfs_in_gki-${PATCH_VER}.patch"
-              patch -p1 < deinlined.patch && patch -p1 < "${{ github.workspace }}/.github/patches/55_try_umount_for_susfs.patch"
-              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/kow-susfs-deinlined.patch")
-              ;;
-            KernelSU-Next)
-              patch -p1 < "${{ github.workspace }}/.github/patches/${{ steps.cfg.outputs.kmi_version }}/50_add_susfs_in_gki-${PATCH_VER}.patch"
-              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/next.patch")
-              ;;
-            KernelSU-Official)
-              patch -p1 < "${{ github.workspace }}/.github/patches/${{ steps.cfg.outputs.kmi_version }}/50_add_susfs_in_gki-${PATCH_VER}.patch"
-              patch -p1 -d KernelSU < "$SUSFS_DIR/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
-              ;;
-            ReSukiSU)
-              patch -p1 < "${{ github.workspace }}/.github/patches/${{ steps.cfg.outputs.kmi_version }}/50_add_susfs_in_gki-${PATCH_VER}.patch"
-              ;;
-            KernelSU-XX)
-              bash "${{ github.workspace }}/.github/scripts/susfs_deinlined.sh" "${{ github.workspace }}/.github/patches/${{ steps.cfg.outputs.kmi_version }}/50_add_susfs_in_gki-${PATCH_VER}.patch"
-              patch -p1 < deinlined.patch && patch -p1 < "${{ github.workspace }}/.github/patches/55_try_umount_for_susfs.patch"
-              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/xx.patch")
-              ;;
-          esac
-
       - name: Setup KSU Toolkit (Official only)
         if: inputs.variant == 'KernelSU-Official'
         working-directory: kernel_workspace/common/KernelSU
         run: |
           patch -p1 < "${{ github.workspace }}/.github/patches/30_ksu_toolkit_for_ksu.patch"
 
-      - name: Setup Manual Hooks
+      - name: Setup SUSFS
+        if: inputs.use_susfs
+        working-directory: kernel_workspace/common
+        env:
+          SUSFS_DIR: ${{ github.workspace }}/susfs4ksu
+          SUSFS_COMMIT: ${{ inputs.susfs_commit }}
+          KMI_VERSION: ${{ steps.cfg.outputs.kmi_version }}
+          PATCH_DIR: ${{ github.workspace }}/.github/patches/${{ steps.cfg.outputs.kmi_version }}
+          DEINLINED_SCRIPT: ${{ github.workspace }}/.github/scripts/susfs_deinlined.sh
+        run: |
+          SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu"
+          git ls-remote "$SUSFS_REPO" >/dev/null 2>&1 || SUSFS_REPO="https://github.com/midori01/susfs4ksu"
+          [ -n "$SUSFS_COMMIT" ] && git clone "$SUSFS_REPO" "$SUSFS_DIR" || git clone --depth 1 --no-single-branch "$SUSFS_REPO" "$SUSFS_DIR"
+          git -C "$SUSFS_DIR" checkout "${SUSFS_COMMIT:-gki-$KMI_VERSION}"
+          cp "$SUSFS_DIR"/kernel_patches/fs/* fs/
+          cp "$SUSFS_DIR"/kernel_patches/include/linux/* include/linux/
+          PATCH_VER="$KMI_VERSION"
+          if [ "${{ inputs.kernel_version }}" = "6.12" ]; then
+            PATCH_VER="$KMI_VERSION.${{ inputs.sub_level }}"
+            if [ ! -f "$PATCH_DIR/50_add_susfs_in_gki-${PATCH_VER}.patch" ]; then
+              for p in $(ls -rv "$PATCH_DIR"/50_add_susfs_in_gki-${KMI_VERSION}.*.patch 2>/dev/null); do
+                sub="${p%.patch}"; sub="${sub##*.}"
+                [ "$sub" -le "${{ inputs.sub_level }}" ] && PATCH_VER="$KMI_VERSION.$sub" && break
+              done
+            fi
+          fi
+          case "${{ inputs.variant }}" in
+            KowSU)
+              bash "$DEINLINED_SCRIPT" "$PATCH_DIR/50_add_susfs_in_gki-${PATCH_VER}.patch"
+              patch -p1 < deinlined.patch && patch -p1 < "${{ github.workspace }}/.github/patches/55_try_umount_for_susfs.patch"
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/kow-susfs-deinlined.patch")
+              ;;
+            KernelSU-Next)
+              bash "$DEINLINED_SCRIPT" "$PATCH_DIR/50_add_susfs_in_gki-${PATCH_VER}.patch"
+              patch -p1 < deinlined.patch && patch -p1 < "${{ github.workspace }}/.github/patches/55_try_umount_for_susfs.patch"
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/next-susfs-deinlined.patch")
+              ;;
+            KernelSU-Official)
+              bash "$DEINLINED_SCRIPT" "$PATCH_DIR/50_add_susfs_in_gki-${PATCH_VER}.patch"
+              patch -p1 < deinlined.patch && patch -p1 < "${{ github.workspace }}/.github/patches/55_try_umount_for_susfs.patch"
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/official-susfs-deinlined.patch")
+              ;;
+            ReSukiSU)
+              bash "$DEINLINED_SCRIPT" "$PATCH_DIR/50_add_susfs_in_gki-${PATCH_VER}.patch"
+              patch -p1 < deinlined.patch
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/resuki-susfs-deinlined.patch")
+              ;;
+            KernelSU-XX)
+              bash "$DEINLINED_SCRIPT" "$PATCH_DIR/50_add_susfs_in_gki-${PATCH_VER}.patch"
+              patch -p1 < deinlined.patch && patch -p1 < "${{ github.workspace }}/.github/patches/55_try_umount_for_susfs.patch"
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/xx.patch")
+              ;;
+          esac
+
+      - name: Setup Manual Hooks (ReSukiSU/XX only)
         if: >-
-          (inputs.variant == 'KernelSU-XX' && inputs.hook_mode != 'hookless') ||
-          (inputs.variant == 'ReSukiSU' && inputs.hook_mode == 'manual' && inputs.use_susfs != true)
+          (inputs.variant == 'KernelSU-XX' && inputs.kernelsu_xx_hook_mode == 'manual') ||
+          (inputs.variant == 'ReSukiSU' && inputs.resukisu_hook_mode == 'manual')
         working-directory: kernel_workspace/common
         run: |
           case "${{ inputs.variant }}" in
@@ -398,7 +401,7 @@ jobs:
         run: |
           patch -p1 < "${{ github.workspace }}/.github/patches/unicode_bypass_fix_6.1+.patch"
 
-      - name: Apply ADIOS I/O Scheduler
+      - name: Apply ADIOS I/O Scheduler (6.6/6.12 only)
         if: inputs.use_adios && inputs.kernel_version != '6.1'
         working-directory: kernel_workspace/common
         run: |
@@ -422,7 +425,8 @@ jobs:
           use_rekernel: ${{ inputs.use_rekernel }}
           use_adios: ${{ inputs.use_adios }}
           use_lz4_zstd: ${{ inputs.use_lz4_zstd }}
-          hook_mode: ${{ inputs.hook_mode }}
+          resukisu_hook_mode: ${{ inputs.resukisu_hook_mode }}
+          kernelsu_xx_hook_mode: ${{ inputs.kernelsu_xx_hook_mode }}
           ksu_debug: ${{ inputs.ksu_debug }}
 
       - name: Save Commit Info
@@ -441,7 +445,7 @@ jobs:
               pushd "${{ github.workspace }}/susfs4ksu" > /dev/null
               git rev-parse HEAD > "$COMMIT_DIR/susfs_commit"
               git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M %z' HEAD > "$COMMIT_DIR/susfs_date"
-              echo "${{ inputs.susfs_repo }}" > "$COMMIT_DIR/susfs_repo"
+              git remote get-url origin | grep -q "github.com" && echo "GitHub" > "$COMMIT_DIR/susfs_repo" || echo "GitLab" > "$COMMIT_DIR/susfs_repo"
               popd > /dev/null
             fi
           }

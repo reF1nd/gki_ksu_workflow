@@ -59,15 +59,23 @@ on:
         required: true
         default: 'backslashxx/KernelSU:master'
         type: string
-      hook_mode:
-        description: "Hook Mode"
+      resukisu_hook_mode:
+        description: 'ReSukiSU Hook Mode'
         required: true
-        default: 'hookless (XX only)'
+        default: 'manual'
         type: choice
         options:
-          - 'manual (XX & RE)'
-          - 'hookless (XX only)'
-          - 'tracepoint (RE only)'
+          - 'manual'
+          - 'tracepoint'
+      kernelsu_xx_hook_mode:
+        description: 'KernelSU-XX Hook Mode'
+        required: true
+        default: 'branch link hijacking'
+        type: choice
+        options:
+          - 'branch link hijacking'
+          - 'syscall table tampering'
+          - 'manual'
       ksu_debug:
         description: 'KernelSU Debug'
         required: true
@@ -108,14 +116,6 @@ on:
         required: true
         default: true
         type: boolean
-      susfs_repo:
-        description: 'SUSFS Repository'
-        required: false
-        default: 'GitLab'
-        type: choice
-        options:
-          - GitLab
-          - GitHub
       susfs_commit:
         description: 'SUSFS Commit Hash (Leave blank for latest)'
         required: false
@@ -169,7 +169,6 @@ jobs:
       build_matrix: ${{ steps.config.outputs.build_matrix }}
       metadata: ${{ steps.config.outputs.metadata }}
       kernel_versions: ${{ steps.config.outputs.kernel_versions }}
-      hook_mode_val: ${{ steps.config.outputs.hook_mode_val }}
       kernel_localversion: ${{ steps.config.outputs.kernel_localversion }}
       build_timestamp: ${{ steps.config.outputs.build_timestamp }}
       build_epoch: ${{ steps.config.outputs.build_epoch }}
@@ -302,14 +301,6 @@ jobs:
           echo "metadata=$(jq -sc '.' /tmp/metadata.json)" >> $GITHUB_OUTPUT
           echo "build_matrix=$matrix" >> $GITHUB_OUTPUT
 
-          case "${{ inputs.hook_mode }}" in
-            'manual (XX & RE)') hook_mode_val="manual" ;;
-            'hookless (XX only)') hook_mode_val="hookless" ;;
-            'tracepoint (RE only)') hook_mode_val="tracepoint" ;;
-            *) hook_mode_val="manual" ;;
-          esac
-          echo "hook_mode_val=$hook_mode_val" >> $GITHUB_OUTPUT
-
   build:
     name: "${{ matrix.kernel_version }}.${{ matrix.sub_level }} - ${{ matrix.variant }}${{ matrix.susfs && (matrix.droidspaces && ' (SUSFS DS)' || ' (SUSFS)') || (matrix.droidspaces && ' (DS)' || '') }}${{ inputs.use_adios && matrix.kernel_version != '6.1' && ' (ADIOS)' || '' }}${{ inputs.use_lz4_zstd && matrix.kernel_version == '6.12' && ' (LZ4/ZSTD)' || '' }}"
     needs: setup
@@ -326,7 +317,6 @@ jobs:
       use_adios: ${{ inputs.use_adios }}
       use_lz4_zstd: ${{ inputs.use_lz4_zstd }}
       use_susfs: ${{ matrix.susfs }}
-      susfs_repo: ${{ inputs.susfs_repo }}
       source_mirror: ${{ inputs.source_mirror }}
       use_ccache: ${{ inputs.use_ccache }}
       susfs_commit: ${{ inputs.susfs_commit }}
@@ -340,7 +330,8 @@ jobs:
       kernelsu_official_branch: ${{ inputs.kernelsu_official_branch }}
       resukisu_branch: ${{ inputs.resukisu_branch }}
       kernelsu_xx_branch: ${{ inputs.kernelsu_xx_branch }}
-      hook_mode: ${{ needs.setup.outputs.hook_mode_val }}
+      resukisu_hook_mode: ${{ inputs.resukisu_hook_mode }}
+      kernelsu_xx_hook_mode: ${{ inputs.kernelsu_xx_hook_mode }}
       ksu_debug: ${{ inputs.ksu_debug }}
       upload_vmlinux: ${{ inputs.upload_vmlinux }}
 
@@ -442,7 +433,7 @@ jobs:
           if [ -f "commit_info/susfs_commit" ]; then
             sha=$(cat commit_info/susfs_commit)
             out "susfs_commit=\`$(short_sha commit_info/susfs_commit)\`"
-            if [ "${{ inputs.susfs_repo }}" = "GitHub" ]; then
+            if [ "$(cat commit_info/susfs_repo 2>/dev/null)" = "GitHub" ]; then
               out "susfs_url=https://github.com/midori01/susfs4ksu/commit/$sha"
             else
               out "susfs_url=https://gitlab.com/simonpunk/susfs4ksu/-/commit/$sha"

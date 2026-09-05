@@ -41,29 +41,31 @@ All kernel version-specific settings are centralized in [`.github/config/kernel_
 | :--- | :---: | :---: | :--- |
 | [KowSU](https://github.com/KOWX712/KernelSU) | ❌ | ❌ | `Kprobes` |
 | [KowSU-DS](https://github.com/KOWX712/KernelSU) | ❌ | ✅ | `Kprobes` |
-| [KowSU-SUSFS](https://github.com/KOWX712/KernelSU) | ✅ | ❌ | `Inline` |
-| [KowSU-SUSFS-DS](https://github.com/KOWX712/KernelSU) | ✅ | ✅ | `Inline` |
+| [KowSU-SUSFS](https://github.com/KOWX712/KernelSU) | ✅ | ❌ | `De-inlined` |
+| [KowSU-SUSFS-DS](https://github.com/KOWX712/KernelSU) | ✅ | ✅ | `De-inlined` |
 | [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) | ❌ | ❌ | `Tracepoint` |
 | [KernelSU-Next-DS](https://github.com/KernelSU-Next/KernelSU-Next) | ❌ | ✅ | `Tracepoint` |
-| [KernelSU-Next-SUSFS](https://github.com/KernelSU-Next/KernelSU-Next) | ✅ | ❌ | `Inline` |
-| [KernelSU-Next-SUSFS-DS](https://github.com/KernelSU-Next/KernelSU-Next) | ✅ | ✅ | `Inline` |
+| [KernelSU-Next-SUSFS](https://github.com/KernelSU-Next/KernelSU-Next) | ✅ | ❌ | `De-inlined` |
+| [KernelSU-Next-SUSFS-DS](https://github.com/KernelSU-Next/KernelSU-Next) | ✅ | ✅ | `De-inlined` |
 | [KernelSU-Official](https://github.com/tiann/KernelSU) | ❌ | ❌ | `Kprobes` |
 | [KernelSU-Official-DS](https://github.com/tiann/KernelSU) | ❌ | ✅ | `Kprobes` |
-| [KernelSU-Official-SUSFS](https://github.com/tiann/KernelSU) | ✅ | ❌ | `Inline` |
-| [KernelSU-Official-SUSFS-DS](https://github.com/tiann/KernelSU) | ✅ | ✅ | `Inline` |
+| [KernelSU-Official-SUSFS](https://github.com/tiann/KernelSU) | ✅ | ❌ | `De-inlined` |
+| [KernelSU-Official-SUSFS-DS](https://github.com/tiann/KernelSU) | ✅ | ✅ | `De-inlined` |
 | [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ❌ | `Manual` |
 | [ReSukiSU-DS](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ✅ | `Manual` |
-| [ReSukiSU-SUSFS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ❌ | `Inline` |
-| [ReSukiSU-SUSFS-DS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ✅ | `Inline` |
-| [KernelSU-XX](https://github.com/backslashxx/KernelSU) | ❌ | ❌ | `Hookless` |
-| [KernelSU-XX-DS](https://github.com/backslashxx/KernelSU) | ❌ | ✅ | `Hookless` |
+| [ReSukiSU-SUSFS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ❌ | `De-inlined` |
+| [ReSukiSU-SUSFS-DS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ✅ | `De-inlined` |
+| [KernelSU-XX](https://github.com/backslashxx/KernelSU) | ❌ | ❌ | `Branch Link` |
+| [KernelSU-XX-DS](https://github.com/backslashxx/KernelSU) | ❌ | ✅ | `Branch Link` |
 | [KernelSU-XX-SUSFS](https://github.com/backslashxx/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-XX-SUSFS-DS](https://github.com/backslashxx/KernelSU) | ✅ | ✅ | `De-inlined` |
 
-> \* **KernelSU-XX & ReSukiSU Hook Type:** Runtime-configurable via `hook_mode`.
-> - `hookless` — default for KernelSU-XX; uses `CONFIG_KSU_HACK_ARM64_BRANCH_LINK` on all kernel versions
-> - `manual` — default for ReSukiSU
-> - `tracepoint` — ReSukiSU only
+> \* **ReSukiSU & KernelSU-XX Hook Type:** Runtime-configurable via `resukisu_hook_mode` and `kernelsu_xx_hook_mode`.
+> - `resukisu_hook_mode` — `manual` (default) / `tracepoint`
+> - `kernelsu_xx_hook_mode`:
+>   - `branch link hijacking` — default for KernelSU-XX; uses `CONFIG_KSU_HACK_ARM64_BRANCH_LINK` to scan kernel text and overwrite call-site branch instructions (`b`/`bl`) directly to hooks, bypassing trampoline overhead and complying with ARM64 CFI
+>   - `syscall table tampering` — uses `CONFIG_KSU_TAMPER_SYSCALL_TABLE` to directly tamper with `sys_call_table` entries, avoiding indirect branch (`blr`) overhead while complying with Clang CFI
+>   - `manual` — manually-patched hooks via `scope-min-manual-hooks-v2.3.patch`
 
 > [!TIP]
 > **Matrix Build Orchestration:** The matrix always produces exactly **1 artifact per variant** — the enabled features (Droidspaces and/or SUSFS) are applied to that single artifact. With all 5 variants selected, this yields **5 builds per sublevel for each kernel version**. Choosing `all` from the `kernel_version` dropdown compiles all configured sublevels across 6.1, 6.6 and 6.12 in parallel for a total of **45 concurrent jobs**.
@@ -80,12 +82,13 @@ Use the manager distributed by the selected upstream: [KowSU](https://github.com
 
 | Type | Mechanism & Characteristics |
 | :--- | :--- |
-| `Kprobes` | Dynamically instruments kernel functions at runtime via kprobe breakpoints. Minimal kernel footprint, broad compatibility. **Default for KowSU and KernelSU Official** (non-SUSFS). |
-| `Tracepoint` | Hooks into the kernel's static syscall tracepoint infrastructure (`sys_enter`/`sys_exit`) without modifying kernel source. **Default for KernelSU-Next** (non-SUSFS). |
-| `Inline` | Compile-time injection via `#ifdef CONFIG_KSU_SUSFS` blocks embedded directly into kernel subsystem source. Uses `static_key` branches for runtime toggling. No reliance on kprobes or LSM hooks. Hardwired into VFS (`exec`, `open`, `stat`, `readdir`, `statfs`), SELinux (`avc`, `hooks`, `services`), input, mounts, and procfs. **Used by the KowSU, KernelSU-Next, ReSukiSU, and KernelSU Official SUSFS builds.** |
-| `De-inlined` | SUSFS hooks applied via kernel source patching rather than inline `#ifdef CONFIG_KSU_SUSFS` blocks. Cleaner separation of SUSFS logic from core kernel subsystems. **Used by KernelSU-XX-SUSFS.** |
-| `Manual` | Static kernel source patching. Custom hooks injected at compile time into core kernel subsystems. **Default for ReSukiSU** (non-SUSFS). |
-| `Hookless` | Pure KernelSU built-in mechanisms. Always enables `CONFIG_KSU_HACK_ARM64_BRANCH_LINK` regardless of kernel version. Zero kernel source modification. Relies entirely on KernelSU's internal hooking infrastructure. **Default for KernelSU-XX** (non-SUSFS). |
+| `Kprobes` | Dynamically instruments kernel functions at runtime via kprobe breakpoints. Minimal kernel footprint, broad compatibility. |
+| `Tracepoint` | Hooks into the kernel's static syscall tracepoint infrastructure (`sys_enter`/`sys_exit`) without modifying kernel source. |
+| `Inline` | Compile-time injection via `#ifdef CONFIG_KSU_SUSFS` blocks embedded directly into kernel subsystem source. Uses `static_key` branches for runtime toggling. No reliance on kprobes or LSM hooks. Hardwired into VFS (`exec`, `open`, `stat`, `readdir`, `statfs`), SELinux (`avc`, `hooks`, `services`), input, mounts, and procfs. |
+| `De-inlined` | SUSFS hooks applied via kernel source patching rather than inline `#ifdef CONFIG_KSU_SUSFS` blocks. Cleaner separation of SUSFS logic from core kernel subsystems. |
+| `Manual` | Static kernel source patching. Custom hooks injected at compile time into core kernel subsystems. |
+| `Branch Link Hijacking` | Scans kernel text to overwrite caller branch instructions (`b`/`bl`) directly to hooks without trampoline overhead. Complies with ARM64 Clang CFI. Enabled via `CONFIG_KSU_HACK_ARM64_BRANCH_LINK`. |
+| `Syscall Table Tampering` | High-performance method that directly modifies function pointers in `sys_call_table` for sucompat and `sys_reboot`. Avoids indirect branch (`blr`) overhead and complies with Clang CFI. Enabled via `CONFIG_KSU_TAMPER_SYSCALL_TABLE`. |
 
 ---
 
