@@ -1,5 +1,5 @@
 From: midori01 <lv@lvlv.lv>
-Date: Thu, 3 Sep 2026 09:13:07 +0900
+Date: Sun, 6 Sep 2026 15:26:56 +0900
 Subject: [PATCH] Enable extra features for KernelSU-Next
 
 ---
@@ -8,7 +8,7 @@ Subject: [PATCH] Enable extra features for KernelSU-Next
  2 files changed, 63 insertions(+), 12 deletions(-)
 
 diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
-index 902631d99..9d1c2411d 100644
+index 8e528c656..fcc865217 100644
 --- a/kernel/supercall/dispatch.c
 +++ b/kernel/supercall/dispatch.c
 @@ -690,24 +690,53 @@ static int add_try_umount(void __user *arg)
@@ -71,8 +71,8 @@ index 902631d99..9d1c2411d 100644
  static int do_get_version_tag(void __user *arg)
  {
      struct ksu_get_version_tag_cmd cmd = {0};
-@@ -926,9 +955,21 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
-         .perm_check = only_root 
+@@ -928,9 +957,21 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
+         .allow_su_session = true
      },
      {
 -        .cmd = KSU_IOCTL_GET_HOOK_MODE,
@@ -97,10 +97,10 @@ index 902631d99..9d1c2411d 100644
      },
      {
 diff --git a/uapi/supercall.h b/uapi/supercall.h
-index 3559b7c17..56d9b8e26 100644
+index 6fd58d22a..c4524c46f 100644
 --- a/uapi/supercall.h
 +++ b/uapi/supercall.h
-@@ -133,8 +133,16 @@ struct ksu_manage_mark_cmd {
+@@ -134,8 +134,16 @@ struct ksu_manage_mark_cmd {
      __u32 result; /* Output: for get operation - mark status or reg_count */
  };
  
@@ -119,7 +119,7 @@ index 3559b7c17..56d9b8e26 100644
  };
  
  struct ksu_get_version_tag_cmd {
-@@ -192,7 +200,9 @@ static const __u32 KSU_IOCTL_ADD_TRY_UMOUNT = _IOC(_IOC_WRITE, 'K', 18, 0);
+@@ -193,7 +201,9 @@ static const __u32 KSU_IOCTL_ADD_TRY_UMOUNT = _IOC(_IOC_WRITE, 'K', 18, 0);
  static const __u32 KSU_IOCTL_SET_INIT_PGRP = _IO('K', 19);
  static const __u32 KSU_IOCTL_GET_SULOG_FD = _IOW('K', 20, struct ksu_get_sulog_fd_cmd);
  static const __u32 KSU_IOCTL_DISABLE_ESCAPE_TO_ROOT = _IO('K', 21);

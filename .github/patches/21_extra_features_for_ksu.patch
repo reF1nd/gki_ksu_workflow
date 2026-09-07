@@ -1,5 +1,5 @@
 From: midori01 <lv@lvlv.lv>
-Date: Thu, 3 Sep 2026 09:06:59 +0900
+Date: Sun, 6 Sep 2026 15:26:56 +0900
 Subject: [PATCH] Enable extra features for KernelSU-XX
 
 ---
@@ -30,7 +30,7 @@ index d4c1e0ee9..a8cf65219 100644
  
  	return 0;
 diff --git a/kernel/include/uapi/supercall.h b/kernel/include/uapi/supercall.h
-index 839b25039..c5f189a64 100644
+index d3eabdd38..66f5e618f 100644
 --- a/kernel/include/uapi/supercall.h
 +++ b/kernel/include/uapi/supercall.h
 @@ -139,6 +139,18 @@ struct ksu_get_sulog_fd_cmd {
@@ -62,10 +62,10 @@ index 839b25039..c5f189a64 100644
  
  #endif
 diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
-index 9fcd4b885..b0294fd03 100644
+index fccf974c3..7e18fb662 100644
 --- a/kernel/supercall/dispatch.c
 +++ b/kernel/supercall/dispatch.c
-@@ -349,9 +349,14 @@ static int do_get_feature(void __user *arg)
+@@ -342,9 +342,14 @@ static int do_get_feature(void __user *arg)
  		return -EFAULT;
  	}
  
@@ -80,7 +80,7 @@ index 9fcd4b885..b0294fd03 100644
  	if (ret && supported) {
  		pr_err("get_feature: failed for feature %u: %d\n", cmd.feature_id, ret);
  		return ret;
-@@ -375,6 +380,9 @@ static int do_set_feature(void __user *arg)
+@@ -368,6 +373,9 @@ static int do_set_feature(void __user *arg)
  		return -EFAULT;
  	}
  
@@ -90,7 +90,7 @@ index 9fcd4b885..b0294fd03 100644
  	ret = ksu_set_feature(cmd.feature_id, cmd.value);
  	if (ret) {
  		pr_err("set_feature: failed for feature %u: %d\n", cmd.feature_id, ret);
-@@ -699,6 +707,65 @@ static int do_disable_escape_to_root(void __user *arg)
+@@ -692,6 +700,65 @@ static int do_disable_escape_to_root(void __user *arg)
  	return 0;
  }
  
@@ -156,10 +156,10 @@ index 9fcd4b885..b0294fd03 100644
  // IOCTL handlers mapping table
  static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
  	{ .cmd = KSU_IOCTL_GRANT_ROOT, .name = "GRANT_ROOT", .handler = do_grant_root, .perm_check = allowed_for_su },
-@@ -725,6 +792,9 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
+@@ -718,6 +785,9 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
  	{ .cmd = KSU_IOCTL_SET_INIT_PGRP, .name = "SET_INIT_PGRP", .handler = do_set_init_pgrp, .perm_check = only_root },
  	{ .cmd = KSU_IOCTL_GET_SULOG_FD, .name = "GET_SULOG_FD", .handler = do_get_sulog_fd, .perm_check = only_root },
- 	{ .cmd = KSU_IOCTL_DISABLE_ESCAPE_TO_ROOT, .name = "DISABLE_ESCAPE_TO_ROOT", .handler = do_disable_escape_to_root, .perm_check = only_root },
+ 	{ .cmd = KSU_IOCTL_DISABLE_ESCAPE_TO_ROOT, .name = "DISABLE_ESCAPE_TO_ROOT", .handler = do_disable_escape_to_root, .perm_check = only_root, .allow_su_session = true },
 +	{ .cmd = KSU_IOCTL_HOOK_TYPE, .name = "HOOK_TYPE", .handler = do_get_hook_type, .perm_check = manager_or_root },
 +	{ .cmd = KSU_IOCTL_SUSFS_VERSION, .name = "SUSFS_VERSION", .handler = do_get_susfs_version, .perm_check = manager_or_root },
 +	{ .cmd = KSU_IOCTL_DRIVER_NAME, .name = "DRIVER_NAME", .handler = do_get_driver_name, .perm_check = manager_or_root },
