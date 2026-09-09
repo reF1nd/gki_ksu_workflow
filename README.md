@@ -33,6 +33,9 @@ This repository implements a unified, config-driven build orchestration system t
 
 All kernel version-specific settings are centralized in [`.github/config/kernel_versions.json`](.github/config/kernel_versions.json). A single `kernel_version` input at workflow dispatch drives the entire build matrix — including Kernel version, Sublevel, Compiler, Rust availability, and AnyKernel3 branch selection.
 
+> [!NOTE]
+> This fork retains kernel 6.12.23 in the default build matrix, together with its source configuration and patches.
+
 ---
 
 ## 📦 Build Variants
