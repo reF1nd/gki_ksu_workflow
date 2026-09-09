@@ -33,6 +33,9 @@
 
 所有内核版本相关的设置都集中存放在 [`.github/config/kernel_versions.json`](.github/config/kernel_versions.json) 中。只需在工作流触发时提供 `kernel_version` 这一个输入参数，即可驱动整个构建矩阵——包括内核版本、子版本、编译器、Rust 可用性以及 AnyKernel3 分支选择。
 
+> [!NOTE]
+> 本仓库继续保留 6.12.23 的默认编译、源码配置和所需补丁。
+
 ---
 
 ## 📦 构建变体

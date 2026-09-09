@@ -265,27 +265,27 @@ jobs:
             KowSU)
               IFS=':' read -r REPO BRANCH <<< "${{ inputs.kowsu_branch }}"
               git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU --forward < "${{ github.workspace }}/.github/patches/24_extra_features_for_ksu.patch" || true
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/kow~1.patch")
               ;;
             KernelSU-Next)
               IFS=':' read -r REPO BRANCH <<< "${{ inputs.kernelsu_next_branch }}"
               git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU --forward < "${{ github.workspace }}/.github/patches/22_extra_features_for_ksu.patch" || true
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/next~1.patch")
               ;;
             KernelSU-Official)
               IFS=':' read -r REPO BRANCH <<< "${{ inputs.kernelsu_official_branch }}"
               git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU --forward < "${{ github.workspace }}/.github/patches/20_extra_features_for_ksu.patch" || true
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/official~1.patch")
               ;;
             ReSukiSU)
               IFS=':' read -r REPO BRANCH <<< "${{ inputs.resukisu_branch }}"
               git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU --forward < "${{ github.workspace }}/.github/patches/23_extra_features_for_ksu.patch" || true
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/resuki~1.patch")
               ;;
             KernelSU-XX)
               IFS=':' read -r REPO BRANCH <<< "${{ inputs.kernelsu_xx_branch }}"
               git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU --forward < "${{ github.workspace }}/.github/patches/21_extra_features_for_ksu.patch" || true
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/xx~1.patch")
               ;;
           esac
           sed -i "s/strscpy(cmd.name, \"[^\"]*\", sizeof(cmd.name));/strscpy(cmd.name, \"$(echo "$REPO" | cut -d'/' -f1)\", sizeof(cmd.name));/" KernelSU/kernel/supercall/dispatch.c
@@ -298,7 +298,7 @@ jobs:
         if: inputs.variant == 'KernelSU-Official'
         working-directory: kernel_workspace/common/KernelSU
         run: |
-          patch -p1 < "${{ github.workspace }}/.github/patches/30_ksu_toolkit_for_ksu.patch"
+          patch -p1 < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/official~2.patch")
 
       - name: Setup SUSFS
         if: inputs.use_susfs
@@ -375,8 +375,8 @@ jobs:
           REKERNEL_X_DIR="${{ github.workspace }}/ReKernel_X"
           git clone --filter=blob:none https://github.com/Sakion-Team/Re-Kernel "$REKERNEL_DIR"
           git clone --filter=blob:none https://github.com/myflavor/ReKernel-X "$REKERNEL_X_DIR"
-          REKERNEL_TAG=$(git -C "$REKERNEL_DIR" describe --tags --abbrev=0) && git -C "$REKERNEL_DIR" checkout "tags/$REKERNEL_TAG"
-          REKERNEL_X_TAG=$(git -C "$REKERNEL_X_DIR" describe --tags --abbrev=0) && git -C "$REKERNEL_X_DIR" checkout "tags/$REKERNEL_X_TAG"
+          REKERNEL_TAG=$(git -C "$REKERNEL_DIR" describe --tags $(git -C "$REKERNEL_DIR" rev-list --tags -n 1)) && git -C "$REKERNEL_DIR" checkout "tags/$REKERNEL_TAG"
+          REKERNEL_X_TAG=$(git -C "$REKERNEL_X_DIR" describe --tags $(git -C "$REKERNEL_X_DIR" rev-list --tags -n 1)) && git -C "$REKERNEL_X_DIR" checkout "tags/$REKERNEL_X_TAG"
           cp -r "$REKERNEL_DIR"/LKM-Source drivers/rekernel
           sed -i 's/depends on MODULES/depends on KSU/' drivers/rekernel/Kconfig
           sed -i 's/obj-m := rekernel.o/obj-$(CONFIG_REKERNEL) += rekernel.o/' drivers/rekernel/Makefile

@@ -33,6 +33,9 @@
 
 커널 버전별 설정은 모두 [`.github/config/kernel_versions.json`](.github/config/kernel_versions.json) 파일에서 통합 관리됩니다. 워크플로우 실행 시 `kernel_version`만 지정하면 커널 버전, 서브 레벨, 컴파일러, Rust 사용 여부, AnyKernel3 브랜치 선택 등 빌드 매트릭스 전체가 자동으로 결정됩니다.
 
+> [!NOTE]
+> 이 포크는 6.12.23 기본 빌드, 소스 설정 및 필요한 패치를 계속 유지합니다。
+
 ---
 
 ## 📦 빌드 배리언트
