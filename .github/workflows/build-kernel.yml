@@ -19,6 +19,10 @@ on:
         required: false
         type: boolean
         default: true
+      use_extra_features:
+        required: false
+        type: boolean
+        default: true
       use_susfs:
         required: true
         type: boolean
@@ -51,10 +55,6 @@ on:
         type: string
         default: 'branch link hijacking'
       ksu_debug:
-        required: false
-        type: boolean
-        default: false
-      upload_vmlinux:
         required: false
         type: boolean
         default: false
@@ -262,43 +262,45 @@ jobs:
         run: |
           mkdir -p commit_info
           case "${{ inputs.variant }}" in
-            KowSU)
-              IFS=':' read -r REPO BRANCH <<< "${{ inputs.kowsu_branch }}"
-              git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/kow~1.patch")
-              ;;
-            KernelSU-Next)
-              IFS=':' read -r REPO BRANCH <<< "${{ inputs.kernelsu_next_branch }}"
-              git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/next~1.patch")
-              ;;
-            KernelSU-Official)
-              IFS=':' read -r REPO BRANCH <<< "${{ inputs.kernelsu_official_branch }}"
-              git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/official~1.patch")
-              ;;
-            ReSukiSU)
-              IFS=':' read -r REPO BRANCH <<< "${{ inputs.resukisu_branch }}"
-              git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/resuki~1.patch")
-              ;;
-            KernelSU-XX)
-              IFS=':' read -r REPO BRANCH <<< "${{ inputs.kernelsu_xx_branch }}"
-              git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
-              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/xx~1.patch")
-              ;;
+            KowSU) SPEC="${{ inputs.kowsu_branch }}" ;;
+            KernelSU-Next) SPEC="${{ inputs.kernelsu_next_branch }}" ;;
+            KernelSU-Official) SPEC="${{ inputs.kernelsu_official_branch }}" ;;
+            ReSukiSU) SPEC="${{ inputs.resukisu_branch }}" ;;
+            KernelSU-XX) SPEC="${{ inputs.kernelsu_xx_branch }}" ;;
           esac
-          sed -i "s/strscpy(cmd.name, \"[^\"]*\", sizeof(cmd.name));/strscpy(cmd.name, \"$(echo "$REPO" | cut -d'/' -f1)\", sizeof(cmd.name));/" KernelSU/kernel/supercall/dispatch.c
+          IFS=':' read -r REPO BRANCH <<< "$SPEC"
+          echo "REPO=$REPO" >> $GITHUB_ENV
+          git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
           bash "${{ github.workspace }}/.github/scripts/setup_ksu.sh"
           ln -sf ../KernelSU/kernel drivers/kernelsu
           grep -q "kernelsu" drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
           grep -q "drivers/kernelsu/Kconfig" drivers/Kconfig || sed -i '/endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
-      - name: Setup KSU Toolkit (Official only)
-        if: inputs.variant == 'KernelSU-Official'
-        working-directory: kernel_workspace/common/KernelSU
+      - name: Setup Extra Features and Fixes
+        if: inputs.use_extra_features
+        working-directory: kernel_workspace/common
         run: |
-          patch -p1 < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/official~2.patch")
+          case "${{ inputs.variant }}" in
+            KowSU)
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/kow~2.patch")
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/kow~1.patch")
+              ;;
+            KernelSU-Next)
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/next~2.patch")
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/next~1.patch")
+              ;;
+            KernelSU-Official)
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/official~2.patch")
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/official~1.patch")
+              ;;
+            ReSukiSU)
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/resuki~1.patch")
+              ;;
+            KernelSU-XX)
+              patch -p1 -d KernelSU < <(curl -fsSL --retry 3 "https://github.com/midori01/KernelSU/commit/xx~1.patch")
+              ;;
+          esac
+          sed -i "s/strscpy(cmd.name, \"[^\"]*\", sizeof(cmd.name));/strscpy(cmd.name, \"$(echo "$REPO" | cut -d'/' -f1)\", sizeof(cmd.name));/" KernelSU/kernel/supercall/dispatch.c
 
       - name: Setup SUSFS
         if: inputs.use_susfs
@@ -516,13 +518,13 @@ jobs:
           [ "${{ inputs.use_ccache }}" = "true" ] && ccache -s || true
 
       - name: Export vmlinux for eBPF
-        if: inputs.upload_vmlinux
+        if: inputs.ksu_debug
         working-directory: kernel_workspace/common/out
         run: |
           [ -f "vmlinux" ] && zstd -T0 -10 vmlinux -o vmlinux.zst
 
       - name: Upload vmlinux Artifact
-        if: inputs.upload_vmlinux
+        if: inputs.ksu_debug
         uses: actions/upload-artifact@v7
         with:
           name: vmlinux-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}
