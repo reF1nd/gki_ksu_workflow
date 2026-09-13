@@ -170,6 +170,7 @@ jobs:
       metadata: ${{ steps.config.outputs.metadata }}
       kernel_versions: ${{ steps.config.outputs.kernel_versions }}
       kernel_localversion: ${{ steps.config.outputs.kernel_localversion }}
+      kernel_localversion_6_1: ${{ steps.config.outputs.kernel_localversion_6_1 }}
       build_timestamp: ${{ steps.config.outputs.build_timestamp }}
       build_epoch: ${{ steps.config.outputs.build_epoch }}
       build_user: ${{ steps.config.outputs.build_user }}
@@ -200,9 +201,19 @@ jobs:
           echo "kernel_versions=$kvs" >> $GITHUB_OUTPUT
 
           SUFFIX="-ksu"
-          [ "${{ inputs.enable_susfs }}" = "true" ] && SUFFIX="${SUFFIX}-susfs"
+          [ "${{ inputs.enable_susfs }}" = "true" ] && SUFFIX="${SUFFIX}-sus"
+          [ "${{ inputs.use_adios }}" = "true" ] && SUFFIX="${SUFFIX}-adios"
           [ "${{ inputs.use_droidspaces }}" = "true" ] && SUFFIX="${SUFFIX}-droidspaces"
-          echo "kernel_localversion=${{ inputs.kernel_localversion || 'SUFFIX_PLACEHOLDER' }}" | sed "s/SUFFIX_PLACEHOLDER/$SUFFIX/" >> $GITHUB_OUTPUT
+
+          SUFFIX_6_1="-ksu"
+          [ "${{ inputs.enable_susfs }}" = "true" ] && SUFFIX_6_1="${SUFFIX_6_1}-sus"
+          [ "${{ inputs.use_droidspaces }}" = "true" ] && SUFFIX_6_1="${SUFFIX_6_1}-droidspaces"
+
+          DEF_KLV="${{ inputs.kernel_localversion || 'SUFFIX_PLACEHOLDER' }}"
+          KLV_DEFAULT=$(echo "$DEF_KLV" | sed "s/SUFFIX_PLACEHOLDER/$SUFFIX/")
+          KLV_6_1=$(echo "$DEF_KLV" | sed "s/SUFFIX_PLACEHOLDER/$SUFFIX_6_1/")
+          echo "kernel_localversion=$KLV_DEFAULT" >> $GITHUB_OUTPUT
+          echo "kernel_localversion_6_1=$KLV_6_1" >> $GITHUB_OUTPUT
 
           if [ -z "${{ inputs.build_timestamp }}" ] || [ "${{ inputs.build_timestamp }}" = "''" ]; then
             build_ts="$(TZ='UTC' date +'%a %b %d %H:%M:%S UTC %Y')"
@@ -287,7 +298,9 @@ jobs:
                 local sus="false"
                 [ "${{ inputs.use_droidspaces }}" = "true" ] && ds="true"
                 [ "${{ inputs.enable_susfs }}" = "true" ] && sus="true"
-                matrix=$(echo "$matrix" | jq -c --arg kv "$kv" --arg sub_level "$sub_level" --arg variant "$v" --argjson ds "$ds" --argjson sus "$sus" '.include += [{"kernel_version":$kv,"sub_level":$sub_level,"variant":$variant,"droidspaces":$ds,"susfs":$sus}]')
+                local klv="$KLV_DEFAULT"
+                [ "$kv" = "6.1" ] && klv="$KLV_6_1"
+                matrix=$(echo "$matrix" | jq -c --arg kv "$kv" --arg sub_level "$sub_level" --arg variant "$v" --argjson ds "$ds" --argjson sus "$sus" --arg klv "$klv" '.include += [{"kernel_version":$kv,"sub_level":$sub_level,"variant":$variant,"droidspaces":$ds,"susfs":$sus,"kernel_localversion":$klv}]')
               }
 
               [[ "$variant" =~ ^(all|KowSU)$ ]] && add_variant KowSU
@@ -321,7 +334,7 @@ jobs:
       source_mirror: ${{ inputs.source_mirror }}
       use_ccache: ${{ inputs.use_ccache }}
       susfs_commit: ${{ inputs.susfs_commit }}
-      kernel_localversion: ${{ needs.setup.outputs.kernel_localversion }}
+      kernel_localversion: ${{ matrix.kernel_localversion }}
       build_epoch: ${{ needs.setup.outputs.build_epoch }}
       build_timestamp: ${{ needs.setup.outputs.build_timestamp }}
       build_user: ${{ needs.setup.outputs.build_user }}
@@ -360,6 +373,11 @@ jobs:
             UNAME_SUB="X"
           fi
           echo "UNAME_SUB=$UNAME_SUB" >> $GITHUB_ENV
+          if [ "${{ matrix.kv }}" = "6.1" ]; then
+            echo "RELEASE_LOCALVERSION=${{ needs.setup.outputs.kernel_localversion_6_1 }}" >> $GITHUB_ENV
+          else
+            echo "RELEASE_LOCALVERSION=${{ needs.setup.outputs.kernel_localversion }}" >> $GITHUB_ENV
+          fi
           echo "KERNEL_SOURCE_INFO<<EOF" >> $GITHUB_ENV
           jq -r '.[] | 
             .source_commit_date as $d |
@@ -473,9 +491,10 @@ jobs:
             ${{ steps.ksu_info.outputs.rekernel_line }}
             ${{ steps.ksu_info.outputs.rekernel_x_line }}
             - **Manager**: Use the manager provided by the selected KernelSU upstream
-            - **Spoofed Uname**: `${{ matrix.kv }}.${{ env.UNAME_SUB }}${{ needs.setup.outputs.kernel_localversion }}`
-            - **Spoofed Build Time**: `${{ needs.setup.outputs.build_timestamp }}`
-            - **Spoofed Builder**: `${{ needs.setup.outputs.build_user }}@${{ needs.setup.outputs.build_host }}`
+            > **Spoofed Kernel Build Info**
+            > - **Uname**: `${{ matrix.kv }}.${{ env.UNAME_SUB }}${{ env.RELEASE_LOCALVERSION }}`
+            > - **Time**: `${{ needs.setup.outputs.build_timestamp }}`
+            > - **Builder**: `${{ needs.setup.outputs.build_user }}@${{ needs.setup.outputs.build_host }}`
             - **Unicode Bypass Fix**: ✅　**CVE-2026-43499 Fix**: ${{ steps.ksu_info.outputs.cve_fixed == 'true' && '✅' || format('❌ ({0})', steps.ksu_info.outputs.cve_failed_subs) }}
             - **Ccache Speedup**: ${{ inputs.use_ccache && '✅' || '❌' }}　**ADIOS I/O Scheduler**: ${{ inputs.use_adios && matrix.kv != '6.1' && '✅' || '❌' }}　**LZ4/ZSTD ZRAM**: ${{ inputs.use_lz4_zstd && matrix.kv == '6.12' && '✅' || '❌' }}
             - **Droidspaces**: ${{ inputs.use_droidspaces && '✅' || '❌' }}　**NTSync**: ${{ inputs.use_droidspaces && '✅' || '❌' }}　**TMPFS**: ✅
