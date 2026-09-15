@@ -1,15 +1,22 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ==============================================================================
-# Script: susfs_deinlined.sh
+# Script:      susfs_deinlined.sh
 # Description: Converts official SUSFS inline-hook patch to a de-inlined version
-# Author: midori01 <lv@lvlv.lv>, Gemini
-# Updated: 2026-09-13
-# Version: 2.1.0
+# Author:      midori01 <lv@lvlv.lv>, Gemini
+# Version:     2.1.1
+# Date:        2026-09-14
 # ==============================================================================
 
 set -e
 
-if [ $# -lt 1 ]; then
+if [ "$1" = "-v" ] || [ "$1" = "--version" ]; then
+    VERSION=$(grep -m1 '^# Version:' "${BASH_SOURCE[0]:-$0}" 2>/dev/null | cut -d: -f2 | xargs)
+    echo "susfs_deinlined.sh v${VERSION:-2.1.1}"
+    exit 0
+fi
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 1 ]; then
     echo "Usage: $0 <official_susfs_patch> [output_patch]"
     exit 1
 fi
@@ -17,10 +24,36 @@ fi
 INPUT="$1"
 OUTPUT="${2:-deinlined.patch}"
 
-python3 - "$INPUT" "$OUTPUT" << 'EOF'
+python3 - "$INPUT" "$OUTPUT" "${BASH_SOURCE[0]:-$0}" << 'EOF'
 import sys
 import os
 import re
+
+def print_script_header_banner(script_path):
+    divider = "=" * 60
+    printed = False
+    if script_path and os.path.isfile(script_path):
+        try:
+            with open(script_path, "r", encoding="utf-8", errors="replace") as f:
+                in_header = False
+                for line in f:
+                    s = line.strip()
+                    if s.startswith("# =="):
+                        if not in_header:
+                            in_header = True
+                            print(divider)
+                            printed = True
+                            continue
+                        else:
+                            break
+                    if in_header and s.startswith("#"):
+                        clean = s.lstrip("#").strip()
+                        if clean:
+                            print(clean)
+        except Exception:
+            pass
+    if printed:
+        print(divider)
 
 def read_patch(filename):
     try:
@@ -270,7 +303,7 @@ def has_real_changes(body):
             return True
     return False
 
-HOOK_PATTERN = re.compile(r"\b(ksu_handle_\w+|ksu_hook_\w+|my_setprocattr)\b")
+HOOK_PATTERN = re.compile(r"\b(ksu_handle_\w+|ksu_hook_\w+)\b")
 
 def find_unique_hooks(lines):
     hooks = []
@@ -357,6 +390,9 @@ def main():
 
     input_file = sys.argv[1]
     output_file = sys.argv[2] if len(sys.argv) > 2 else "deinlined.patch"
+    script_file = sys.argv[3] if len(sys.argv) > 3 else None
+
+    print_script_header_banner(script_file)
 
     content = read_patch(input_file)
     file_patches = split_patch(content)
@@ -420,24 +456,21 @@ def main():
     total_hooks_dropped = sum(len(info["dropped_hooks"]) for info in all_dropped_hook_files)
     dropped_files = [info for _, info in results if info["status"] == "DROP"]
 
-    if total_hooks_dropped > 0:
-        print(f"  Dropped inline hooks ({total_hooks_dropped}):")
-        for info in all_dropped_hook_files:
-            h_names = ", ".join(info["dropped_hooks"])
-            cnt = len(info["dropped_hooks"])
-            tag_hk = f"({cnt} hook):" if cnt == 1 else f"({cnt} hooks):"
-            print(f"    - {info['target']} {tag_hk} {h_names}")
-    else:
-        print("  Dropped inline hooks: 0")
-
     if dropped_files:
         print(f"  Dropped files ({len(dropped_files)}):")
         for info in dropped_files:
-            orig_h = info["orig_hunks"]
-            h_word = "hunk" if orig_h == 1 else "hunks"
-            print(f"    - {info['target']} ({orig_h}/{orig_h} {h_word} dropped)")
+            print(f"    - {info['target']}")
     else:
         print("  Dropped files: 0")
+
+    if total_hooks_dropped > 0:
+        print(f"  Stripped inline hooks ({total_hooks_dropped}):")
+        for info in all_dropped_hook_files:
+            h_names = ", ".join(re.sub(r"^(?:ksu_handle_|ksu_hook_)", "", h) for h in info["dropped_hooks"])
+            cnt = len(info["dropped_hooks"])
+            print(f"    - {info['target']} ({cnt}): {h_names}")
+    else:
+        print("  Stripped inline hooks: 0")
 
     print(f"\nDone! Successfully written to: {output_file}")
 
