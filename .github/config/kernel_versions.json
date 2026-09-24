@@ -36,13 +36,13 @@
     "revisions": {
       "139": {
         "asb_date": "2026-07",
-        "default_r": "r9",
+        "default_r": "r10",
         "supported_r": [
-          "r9",
+          "r10",
           "none"
         ],
-        "commit": "cd263d01c1b512d8a3d9876c50082e8c322c73bd",
-        "commit_date": "2026-09-16 19:41:08 -0700"
+        "commit": "bbed7f5ad38528eeceaaa4f64092d5a438c2d3e5",
+        "commit_date": "2026-09-22 06:58:32 -0700"
       },
       "143": {
         "asb_date": "lts",
@@ -86,23 +86,23 @@
       },
       "69": {
         "asb_date": "2026-03",
-        "default_r": "r69",
+        "default_r": "r71",
         "supported_r": [
-          "r69",
+          "r71",
           "none"
         ],
-        "commit": "da20c4f35dcc3729bc90d6f516f3e9ce86964cbe",
-        "commit_date": "2026-09-08 23:38:31 -0700"
+        "commit": "1b956466492c56bfaf20f0179d134d4fb871862e",
+        "commit_date": "2026-09-22 06:58:31 -0700"
       },
       "81": {
         "asb_date": "2026-06",
-        "default_r": "r27",
+        "default_r": "r29",
         "supported_r": [
-          "r27",
+          "r29",
           "none"
         ],
-        "commit": "69ff787e893f8e8722a56b7d3a7d0f0ea6f777f2",
-        "commit_date": "2026-09-16 06:06:31 -0700"
+        "commit": "ac82a670c788d141cb01a029c094844aec0d36bd",
+        "commit_date": "2026-09-18 09:46:26 -0700"
       },
       "93": {
         "asb_date": "lts",
