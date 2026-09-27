@@ -49,5 +49,18 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add .github/config/kernel_versions.json
-          git diff --staged --quiet || git commit -m "auto: update kernel versions"
-          git push
+          if ! git diff --staged --quiet; then
+            git commit -m "auto: update kernel versions"
+            pushed=false
+            for i in 1 2 3 4 5; do
+              if git pull --rebase origin ${{ github.ref_name }} && git push origin HEAD:${{ github.ref_name }}; then
+                pushed=true
+                break
+              fi
+              sleep 3
+            done
+            if [ "$pushed" != true ]; then
+              echo "::error::Failed to push kernel updates after 5 attempts."
+              exit 1
+            fi
+          fi
