@@ -6,13 +6,13 @@
     "revisions": {
       "172": {
         "asb_date": "2026-06",
-        "default_r": "r11",
+        "default_r": "r13",
         "supported_r": [
-          "r11",
+          "r13",
           "none"
         ],
-        "commit": "827d934a7fb2a47a826def0c1955820cc147a60f",
-        "commit_date": "2026-09-17 03:46:49 -0700"
+        "commit": "f214a47ee5e8182cf33a27475292c85feb28ed4b",
+        "commit_date": "2026-09-28 22:28:12 -0700"
       },
       "177": {
         "asb_date": "lts",
@@ -20,8 +20,8 @@
         "supported_r": [
           "r00"
         ],
-        "commit": "38c2ee7f1213aaa84824aa93e0fbfb80bdb3efb6",
-        "commit_date": "2026-09-11 02:59:54 -0700"
+        "commit": "4056c236e4c84d5fdc5c80409a8fa37ef82f53b9",
+        "commit_date": "2026-10-02 11:49:32 +0000"
       }
     },
     "default_clang": "r487747c",
@@ -31,27 +31,27 @@
   },
   "6.6": {
     "android_version": "android15",
-    "default_sub_level": "143",
+    "default_sub_level": "144",
     "use_lts": true,
     "revisions": {
       "139": {
         "asb_date": "2026-07",
-        "default_r": "r10",
+        "default_r": "r11",
         "supported_r": [
-          "r10",
+          "r11",
           "none"
         ],
-        "commit": "bbed7f5ad38528eeceaaa4f64092d5a438c2d3e5",
-        "commit_date": "2026-09-22 06:58:32 -0700"
+        "commit": "8434036f34e4944b0777ebbe867eeb6f2592b332",
+        "commit_date": "2026-09-25 22:25:08 +0000"
       },
-      "143": {
+      "144": {
         "asb_date": "lts",
         "default_r": "r00",
         "supported_r": [
           "r00"
         ],
-        "commit": "93bbc15e5f81decdc48d1318aa0ba5ffb4211059",
-        "commit_date": "2026-09-11 10:07:46 +0000"
+        "commit": "712c2cd5cdc1c35470b3142e46622c0a8decc7c4",
+        "commit_date": "2026-09-29 13:02:52 +0000"
       }
     },
     "default_clang": "r510928",
@@ -61,7 +61,7 @@
   },
   "6.12": {
     "android_version": "android16",
-    "default_sub_level": "93",
+    "default_sub_level": "94",
     "use_lts": true,
     "revisions": {
       "23": {
@@ -76,13 +76,13 @@
       },
       "38": {
         "asb_date": "2025-09",
-        "default_r": "r38",
+        "default_r": "r39",
         "supported_r": [
-          "r38",
+          "r39",
           "none"
         ],
-        "commit": "1b0462bd0618c9fa384498dce3d8c4476182bedf",
-        "commit_date": "2026-09-02 02:39:15 -0700"
+        "commit": "4ef93a700ec424fe0d4f7d133e7ba50e4dbf0e36",
+        "commit_date": "2026-09-28 18:49:39 -0700"
       },
       "69": {
         "asb_date": "2026-03",
@@ -104,14 +104,14 @@
         "commit": "4299a407e96371f275c3bcb7a87ab8b1950a034c",
         "commit_date": "2026-09-24 01:19:57 -0700"
       },
-      "93": {
+      "94": {
         "asb_date": "lts",
         "default_r": "r00",
         "supported_r": [
           "r00"
         ],
-        "commit": "57041e4a7e52342473871000827584f966d8cbd3",
-        "commit_date": "2026-09-11 15:49:11 +0000"
+        "commit": "e57243be434e7faedd9a0085ddd34719cdf2531c",
+        "commit_date": "2026-10-02 12:03:23 +0000"
       }
     },
     "default_clang": "r536225",
