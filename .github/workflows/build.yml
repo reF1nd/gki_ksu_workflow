@@ -106,6 +106,11 @@ on:
         required: true
         default: true
         type: boolean
+      use_vpnhide:
+        description: 'VPNHide Next'
+        required: true
+        default: true
+        type: boolean
       use_extra_features:
         description: 'Extra Features & Fixes'
         required: true
@@ -116,8 +121,8 @@ on:
         required: true
         default: true
         type: boolean
-      update_susfs_patches:
-        description: 'Sync SUSFS Patches'
+      sync_upstream:
+        description: 'Update Kernel Sources & SUSFS Patches'
         required: false
         default: false
         type: boolean
@@ -150,11 +155,6 @@ on:
           - release
           - pre-release
           - no-release
-      cleanup_tags:
-        description: "Cleanup Old Releases"
-        type: boolean
-        required: true
-        default: true
 
 permissions:
   contents: write
@@ -162,12 +162,13 @@ permissions:
 
 jobs:
   fetch:
+    if: inputs.sync_upstream
     uses: ./.github/workflows/update.yml
     with:
       kernel_version: ${{ inputs.kernel_version }}
 
   sync_susfs:
-    if: inputs.enable_susfs && inputs.update_susfs_patches
+    if: inputs.sync_upstream && inputs.enable_susfs
     uses: ./.github/workflows/sync-susfs.yml
     with:
       kernel_version: ${{ inputs.kernel_version }}
@@ -177,7 +178,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.fetch.result == 'success' &&
+      (needs.fetch.result == 'success' || needs.fetch.result == 'skipped') &&
       (needs.sync_susfs.result == 'success' || needs.sync_susfs.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
@@ -185,8 +186,6 @@ jobs:
       build_matrix: ${{ steps.config.outputs.build_matrix }}
       metadata: ${{ steps.config.outputs.metadata }}
       kernel_versions: ${{ steps.config.outputs.kernel_versions }}
-      kernel_localversion: ${{ steps.config.outputs.kernel_localversion }}
-      kernel_localversion_6_1: ${{ steps.config.outputs.kernel_localversion_6_1 }}
       build_timestamp: ${{ steps.config.outputs.build_timestamp }}
       build_epoch: ${{ steps.config.outputs.build_epoch }}
       build_user: ${{ steps.config.outputs.build_user }}
@@ -215,21 +214,6 @@ jobs:
             kvs='["${{ inputs.kernel_version }}"]'
           fi
           echo "kernel_versions=$kvs" >> $GITHUB_OUTPUT
-
-          SUFFIX="-ksu"
-          [ "${{ inputs.enable_susfs }}" = "true" ] && SUFFIX="${SUFFIX}-sus"
-          [ "${{ inputs.use_adios }}" = "true" ] && SUFFIX="${SUFFIX}-adios"
-          [ "${{ inputs.use_droidspaces }}" = "true" ] && SUFFIX="${SUFFIX}-droidspaces"
-
-          SUFFIX_6_1="-ksu"
-          [ "${{ inputs.enable_susfs }}" = "true" ] && SUFFIX_6_1="${SUFFIX_6_1}-sus"
-          [ "${{ inputs.use_droidspaces }}" = "true" ] && SUFFIX_6_1="${SUFFIX_6_1}-droidspaces"
-
-          DEF_KLV="${{ inputs.kernel_localversion || 'SUFFIX_PLACEHOLDER' }}"
-          KLV_DEFAULT=$(echo "$DEF_KLV" | sed "s/SUFFIX_PLACEHOLDER/$SUFFIX/")
-          KLV_6_1=$(echo "$DEF_KLV" | sed "s/SUFFIX_PLACEHOLDER/$SUFFIX_6_1/")
-          echo "kernel_localversion=$KLV_DEFAULT" >> $GITHUB_OUTPUT
-          echo "kernel_localversion_6_1=$KLV_6_1" >> $GITHUB_OUTPUT
 
           if [ -z "${{ inputs.build_timestamp }}" ] || [ "${{ inputs.build_timestamp }}" = "''" ]; then
             build_ts="$(TZ='UTC' date +'%a %b %d %H:%M:%S UTC %Y')"
@@ -314,9 +298,7 @@ jobs:
                 local sus="false"
                 [ "${{ inputs.use_droidspaces }}" = "true" ] && ds="true"
                 [ "${{ inputs.enable_susfs }}" = "true" ] && sus="true"
-                local klv="$KLV_DEFAULT"
-                [ "$kv" = "6.1" ] && klv="$KLV_6_1"
-                matrix=$(echo "$matrix" | jq -c --arg kv "$kv" --arg sub_level "$sub_level" --arg variant "$v" --argjson ds "$ds" --argjson sus "$sus" --arg klv "$klv" '.include += [{"kernel_version":$kv,"sub_level":$sub_level,"variant":$variant,"droidspaces":$ds,"susfs":$sus,"kernel_localversion":$klv}]')
+                matrix=$(echo "$matrix" | jq -c --arg kv "$kv" --arg sub_level "$sub_level" --arg variant "$v" --argjson ds "$ds" --argjson sus "$sus" '.include += [{"kernel_version":$kv,"sub_level":$sub_level,"variant":$variant,"droidspaces":$ds,"susfs":$sus}]')
               }
 
               [[ "$variant" =~ ^(all|KowSU)$ ]] && add_variant KowSU
@@ -347,6 +329,7 @@ jobs:
       variant: ${{ matrix.variant }}
       use_droidspaces: ${{ matrix.droidspaces }}
       use_rekernel: ${{ inputs.use_rekernel }}
+      use_vpnhide: ${{ inputs.use_vpnhide }}
       use_adios: ${{ inputs.use_adios }}
       use_lz4_zstd: ${{ inputs.use_lz4_zstd }}
       use_extra_features: ${{ inputs.use_extra_features }}
@@ -354,7 +337,7 @@ jobs:
       source_mirror: ${{ inputs.source_mirror }}
       use_ccache: ${{ inputs.use_ccache }}
       susfs_commit: ${{ inputs.susfs_commit }}
-      kernel_localversion: ${{ matrix.kernel_localversion }}
+      kernel_localversion: ${{ inputs.kernel_localversion }}
       build_epoch: ${{ needs.setup.outputs.build_epoch }}
       build_timestamp: ${{ needs.setup.outputs.build_timestamp }}
       build_user: ${{ needs.setup.outputs.build_user }}
@@ -393,11 +376,6 @@ jobs:
             UNAME_SUB="X"
           fi
           echo "UNAME_SUB=$UNAME_SUB" >> $GITHUB_ENV
-          if [ "${{ matrix.kv }}" = "6.1" ]; then
-            echo "RELEASE_LOCALVERSION=${{ needs.setup.outputs.kernel_localversion_6_1 }}" >> $GITHUB_ENV
-          else
-            echo "RELEASE_LOCALVERSION=${{ needs.setup.outputs.kernel_localversion }}" >> $GITHUB_ENV
-          fi
           echo "KERNEL_SOURCE_INFO<<EOF" >> $GITHUB_ENV
           jq -r '.[] | 
             .source_commit_date as $d |
@@ -443,9 +421,46 @@ jobs:
         run: |
           gh release download --repo sidex15/susfs4ksu-module --pattern "*.zip" --dir release_zips 2>/dev/null || true
 
+      - name: Download VPNHide Bridge Module
+        if: inputs.use_vpnhide == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bridge=""
+          gh release download --repo soranerai/vpnhide_next_backend --pattern "vpnhide-bridge.zip" --dir release_zips 2>/dev/null || true
+          if [ -f "release_zips/vpnhide-bridge.zip" ]; then
+            bridge="vpnhide-bridge.zip"
+          fi
+          echo "VPNHIDE_BRIDGE_FILE=$bridge" >> $GITHUB_ENV
+
       - name: Read Commit Info
         id: ksu_info
         run: |
+          default_klv=""
+          if [ -n "${{ inputs.kernel_localversion }}" ]; then
+            default_klv="${{ inputs.kernel_localversion }}"
+            [[ "$default_klv" == -* ]] || default_klv="-$default_klv"
+          elif [ -f "commit_info/localversion" ]; then
+            default_klv="$(cat commit_info/localversion | head -n 1)"
+          fi
+
+          unique_klvs=$(cat commit_info/localversion_* 2>/dev/null | sort -u)
+          klv_count=$(echo "$unique_klvs" | grep -c . || true)
+          if [ "$klv_count" -gt 1 ]; then
+            uname_text="> - **Uname**:"
+            for f in $(ls commit_info/localversion_* 2>/dev/null | sort -V); do
+              sub=$(basename "$f" | sed 's/localversion_//')
+              sub_klv=$(cat "$f" | head -n 1)
+              uname_text=$(printf "%s\n>   - **${{ matrix.kv }}.%s**: \`${{ matrix.kv }}.%s%s\`" "$uname_text" "$sub" "$sub" "$sub_klv")
+            done
+          else
+            klv=$(echo "$unique_klvs" | head -n 1)
+            [ -z "$klv" ] && klv="$default_klv"
+            uname_text="> - **Uname**: \`${{ matrix.kv }}.${{ env.UNAME_SUB }}${klv}\`"
+          fi
+          echo "RELEASE_UNAME<<EOF" >> $GITHUB_ENV
+          echo "$uname_text" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
           variant="${{ inputs.ksu_variant }}"
           short_sha() { cut -c1-7 "$1"; }
           out() { echo "$1" >> $GITHUB_OUTPUT; }
@@ -468,6 +483,13 @@ jobs:
             local date=$(cat "${file%_commit}_date")
             out "rekernel_x_line=- **${label}**: [\`$(echo $sha | cut -c1-7)\`](https://github.com/myflavor/ReKernel-X/commit/$sha) \`$date\`"
           }
+          vpnhide_line() {
+            local label=$1 file=$2
+            [ -f "$file" ] || return 0
+            local sha=$(cat "$file")
+            local date=$(cat "${file%_commit}_date")
+            out "vpnhide_line=- **${label}**: [\`$(echo $sha | cut -c1-7)\`](https://github.com/soranerai/vpnhide_next_backend/commit/$sha) \`$date\`"
+          }
           if [ -f "commit_info/susfs_commit" ]; then
             sha=$(cat commit_info/susfs_commit)
             out "susfs_commit=\`$(short_sha commit_info/susfs_commit)\`"
@@ -488,6 +510,7 @@ jobs:
           fi
           rekernel_line "Re:Kernel" commit_info/rekernel_commit
           rekernel_x_line "Re:Kernel-X" commit_info/rekernel_x_commit
+          vpnhide_line "VPNHide Next" commit_info/vpnhide_commit
           ksu_line KowSU kowsu "$(cat commit_info/kowsu_ksu_repo 2>/dev/null)" commit_info/kowsu_ksu_commit
           ksu_line KernelSU-Next kernelsu_next "$(cat commit_info/kernelsu_next_ksu_repo 2>/dev/null)" commit_info/kernelsu_next_ksu_commit
           ksu_line KernelSU-Official kernelsu_official "$(cat commit_info/kernelsu_official_ksu_repo 2>/dev/null)" commit_info/kernelsu_official_ksu_commit
@@ -510,9 +533,10 @@ jobs:
             ${{ steps.ksu_info.outputs.susfs_url && format('- **SUSFS4KSU**: [{0}]({1}) {2}', steps.ksu_info.outputs.susfs_commit, steps.ksu_info.outputs.susfs_url, steps.ksu_info.outputs.susfs_date) || '' }}
             ${{ steps.ksu_info.outputs.rekernel_line }}
             ${{ steps.ksu_info.outputs.rekernel_x_line }}
+            ${{ steps.ksu_info.outputs.vpnhide_line }}
             - **Manager**: Use the manager provided by the selected KernelSU upstream
             > **Spoofed Kernel Build Info**
-            > - **Uname**: `${{ matrix.kv }}.${{ env.UNAME_SUB }}${{ env.RELEASE_LOCALVERSION }}`
+            ${{ env.RELEASE_UNAME }}
             > - **Time**: `${{ needs.setup.outputs.build_timestamp }}`
             > - **Builder**: `${{ needs.setup.outputs.build_user }}@${{ needs.setup.outputs.build_host }}`
             - **Unicode Bypass Fix**: ✅　**CVE-2026-43499 Fix**: ${{ steps.ksu_info.outputs.cve_fixed == 'true' && '✅' || format('❌ ({0})', steps.ksu_info.outputs.cve_failed_subs) }}
@@ -520,6 +544,7 @@ jobs:
             - **Droidspaces**: ${{ inputs.use_droidspaces && '✅' || '❌' }}　**NTSync**: ${{ inputs.use_droidspaces && '✅' || '❌' }}　**TMPFS**: ✅
             - **TCP BBR**: ✅　**IPSET**: ✅　**Enhanced NAT**: ✅
             - **KSU Toolkit**: ${{ env.TOOLKIT_FILE && format('✅ `({0})`', env.TOOLKIT_FILE) || '❌' }}
+            - **VPNHide Next**: ${{ env.VPNHIDE_BRIDGE_FILE && format('✅ `({0})`', env.VPNHIDE_BRIDGE_FILE) || (inputs.use_vpnhide && '✅' || '❌') }}
             - **Compiler**: `clang-${{ env.CLANG_VERSION }}`${{ env.RUST_VERSION && format('　**Rust**: `{0}`', env.RUST_VERSION) || '' }}
           files: |
             release_zips/*.zip
@@ -530,6 +555,6 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      inputs.cleanup_tags &&
+      inputs.release_type == 'release' &&
       needs.release.result == 'success'
     uses: ./.github/workflows/cleanup-tags.yml

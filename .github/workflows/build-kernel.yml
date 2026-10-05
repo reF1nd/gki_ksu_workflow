@@ -19,6 +19,10 @@ on:
         required: false
         type: boolean
         default: true
+      use_vpnhide:
+        required: false
+        type: boolean
+        default: true
       use_extra_features:
         required: false
         type: boolean
@@ -78,8 +82,9 @@ on:
         type: string
         default: ''
       kernel_localversion:
-        required: true
+        required: false
         type: string
+        default: ''
       build_epoch:
         required: true
         type: string
@@ -227,6 +232,7 @@ jobs:
           sed -i ':a; /#ifdef USE_PKCS11_ENGINE/{N;N;s/#ifdef USE_PKCS11_ENGINE\n\(.*\)\n#endif/\1/; ta}' common/certs/extract-cert.c || true
           sed -i '/bad_version:/,/return 0;/s/return 0;/return 1;/' common/kernel/module/version.c || true
           sed -i '/same_magic(/,/return strcmp/s/return strcmp(amagic, bmagic) == 0;/return 1;/' common/kernel/module/version.c || true
+          sed -i 's/PAGE_ALIGN(cma->mapped_size)/PAGE_ALIGN(cma->mapped_size ? cma->mapped_size : cma->max_size)/' common/drivers/virt/gunyah/vm_mgr_cma_mem.c || true
 
       - name: Apply LZ4 1.10.0 and Zstd 1.5.7
         if: inputs.use_lz4_zstd && inputs.kernel_version == '6.12'
@@ -389,6 +395,15 @@ jobs:
           echo 'obj-y += rekernel_x/' >> drivers/Makefile
           echo "RKX_VERSION=v$REKERNEL_X_TAG" >> $GITHUB_ENV
 
+      - name: Setup VPNHide Next
+        if: inputs.use_vpnhide
+        working-directory: kernel_workspace/common
+        run: |
+          VPNHIDE_DIR="${{ github.workspace }}/vpnhide_next"
+          git clone --filter=blob:none https://github.com/soranerai/vpnhide_next_backend.git "$VPNHIDE_DIR"
+          VPNHIDE_TAG=$(git -C "$VPNHIDE_DIR" describe --tags $(git -C "$VPNHIDE_DIR" rev-list --tags -n 1)) && git -C "$VPNHIDE_DIR" checkout "tags/$VPNHIDE_TAG"
+          bash "$VPNHIDE_DIR/kpatch/scripts/apply.sh" . "${{ steps.cfg.outputs.kmi_version }}"
+
       - name: Apply Unicode Bypass Fix
         working-directory: kernel_workspace/common
         run: |
@@ -404,6 +419,23 @@ jobs:
         if: inputs.use_adios && inputs.kernel_version == '6.1'
         run: echo "::warning::ADIOS is supported only for kernels 6.6 and 6.12; this build will continue without ADIOS."
 
+      - name: Determine Kernel Localversion
+        id: localversion
+        working-directory: kernel_workspace/common
+        run: |
+          if [ -n "${{ inputs.kernel_localversion }}" ]; then
+            final_klv="${{ inputs.kernel_localversion }}"
+            [[ "$final_klv" == -* ]] || final_klv="-$final_klv"
+          else
+            suffix="-ksu${{ inputs.use_susfs && '-sus' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}"
+            kmi=$(sed -nE 's/^[[:space:]]*KMI_GENERATION=([0-9]+).*$/\1/p' build.config.constants build.config.common 2>/dev/null | head -n 1 || true)
+            final_klv="-${{ steps.cfg.outputs.android_version }}${kmi:+-$kmi}$suffix"
+          fi
+          echo "localversion=$final_klv" >> $GITHUB_OUTPUT
+          mkdir -p commit_info
+          echo "$final_klv" > commit_info/localversion
+          echo "$final_klv" > "commit_info/localversion_${{ inputs.sub_level }}"
+
       - name: Inject Kernel Configs
         uses: ./.github/actions/kernel-config
         with:
@@ -413,9 +445,10 @@ jobs:
           sub_level: ${{ steps.cfg.outputs.sub_level }}
           variant: ${{ inputs.variant }}
           enable_susfs: ${{ inputs.use_susfs }}
-          localversion: ${{ inputs.kernel_localversion }}
+          localversion: ${{ steps.localversion.outputs.localversion }}
           use_droidspaces: ${{ inputs.use_droidspaces }}
           use_rekernel: ${{ inputs.use_rekernel }}
+          use_vpnhide: ${{ inputs.use_vpnhide }}
           use_adios: ${{ inputs.use_adios }}
           use_lz4_zstd: ${{ inputs.use_lz4_zstd }}
           resukisu_hook_mode: ${{ inputs.resukisu_hook_mode }}
@@ -458,6 +491,14 @@ jobs:
               popd > /dev/null
             fi
           }
+          save_vpnhide_commit() {
+            if [ "${{ inputs.use_vpnhide }}" = "true" ] && [ -d "${{ github.workspace }}/vpnhide_next" ]; then
+              pushd "${{ github.workspace }}/vpnhide_next" > /dev/null
+              git rev-parse HEAD > "$COMMIT_DIR/vpnhide_commit"
+              git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M %z' HEAD > "$COMMIT_DIR/vpnhide_date"
+              popd > /dev/null
+            fi
+          }
           case "${{ inputs.variant }}" in
             KowSU)
               save_ksu_commit kowsu
@@ -487,6 +528,7 @@ jobs:
           esac
           save_rekernel_commit
           save_rekernel_x_commit
+          save_vpnhide_commit
 
       - name: Upload Commit Info
         uses: actions/upload-artifact@v7

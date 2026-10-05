@@ -71,7 +71,7 @@
 >   - `manual` — 通过 `scope-min-manual-hooks-v2.3.patch` 打入的手动 hook
 
 > [!TIP]
-> **矩阵构建编排：** 矩阵始终为每个变体产出恰好 **1 个构件** — 启用的功能（Droidspaces 和/或 SUSFS）会应用到该单一构件上。选择全部 5 个变体时，每个内核版本的 **每个子版本产生 5 次构建**。从 `kernel_version` 下拉菜单中选择 `all` 将并行编译 6.1、6.6 和 6.12 的所有子版本，在默认配置下共 **45 个并发 Job**。
+> **矩阵构建编排：** 矩阵始终为每个变体产出恰好 **1 个构件** — 启用的功能（Droidspaces 和/或 SUSFS）会应用到该单一构件上。选择全部 5 个变体时，每个内核版本的 **每个子版本产生 5 次构建**。从 `kernel_version` 下拉菜单中选择 `all` 将并行编译 6.1、6.6 和 6.12 的所有子版本，在默认配置下共 **55 个并发 Job**。
 
 ---
 
@@ -105,6 +105,7 @@
 | **KSU 工具箱** | 自动从 nightly.link 获取最新的 [ksu_toolkit](https://github.com/backslashxx/ksu_toolkit) 模块并将其附加到发布中。 |
 | **Droidspaces** | 通过 [Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS) 提供容器支持 — SYSVIPC、IPC_NS、PID_NS、DEVTMPFS、NTSync 和网络。通过 `use_droidspaces` 开关按变体启用。 |
 | **Re:Kernel(-X)** | 集成的 [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) 和 [Re:Kernel-X](https://github.com/myflavor/ReKernel-X) 模块直接编译进内核。提供 tombstone 冻结恢复、网络触发解冻和 binder 异步清理。通过 `use_rekernel` 开关控制。 |
+| **VPNHide Next** | 通过 In-tree kpatch (`CONFIG_VPNHIDE=y`) 集成 [VPNHide Next](https://github.com/soranerai/vpnhide_next_backend)，在内核层隐藏 VPN 网络接口、路由规则和套接字描述符，无需依赖动态 LKM。自动将配套的 `vpnhide-bridge.zip` 模块附加到发布中。通过 `use_vpnhide` 开关控制。 |
 | **Unicode 绕过修复** | 始终启用。修补内核 Unicode 规范化，以防止通过非标准 Unicode 编码进行文件系统绕过攻击。 |
 | **ADIOS I/O 调度器** | 可选集成 [ADIOS](https://github.com/firelzrd/adios)，并作为 kernel 6.6 和 6.12 构建的内置默认多队列 I/O 调度器。通过 `use_adios` 开关启用；kernel 6.1 保持不变。 |
 | **LZ4/ZSTD ZRAM 后端** | 可选将内核中的 LZ4 和 ZSTD 实现更新为官方 LZ4 1.10.0 与 Zstandard 1.5.7 版本，并为 kernel 6.12（仅在 6.12.23 测试通过）启用 ZRAM 后端。通过 `use_lz4_zstd` 开关控制；6.1 和 6.6 构建保持不变。 |
