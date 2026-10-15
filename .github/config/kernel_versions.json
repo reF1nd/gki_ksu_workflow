@@ -4,16 +4,6 @@
     "default_sub_level": "177",
     "use_lts": true,
     "revisions": {
-      "176": {
-        "asb_date": "2026-09",
-        "default_r": "r3",
-        "supported_r": [
-          "r3",
-          "none"
-        ],
-        "commit": "baaec1dcbad58ca5f9d930a3745b551062b8cddf",
-        "commit_date": "2026-10-06 10:28:02 -0700"
-      },
       "177": {
         "asb_date": "lts",
         "default_r": "r00",
@@ -34,16 +24,6 @@
     "default_sub_level": "144",
     "use_lts": true,
     "revisions": {
-      "139": {
-        "asb_date": "2026-07",
-        "default_r": "r13",
-        "supported_r": [
-          "r13",
-          "none"
-        ],
-        "commit": "1b13e7b04a490698b1554af6309a3c216ed3f491",
-        "commit_date": "2026-10-13 20:36:06 +0000"
-      },
       "144": {
         "asb_date": "lts",
         "default_r": "r00",
