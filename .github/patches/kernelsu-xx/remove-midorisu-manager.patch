@@ -1,0 +1,30 @@
+Subject: [PATCH] KernelSU-XX: remove MidoriSU manager authorization
+
+Keep the other upstream manager package and signature checks unchanged.
+
+diff --git a/kernel/manager/throne_tracker.c b/kernel/manager/throne_tracker.c
+--- a/kernel/manager/throne_tracker.c
++++ b/kernel/manager/throne_tracker.c
+@@ -13,8 +13,7 @@
+ 	!strncmp(tgt, name, sizeof(name));		\
+ })
+ #define is_kowsu_apk(tgt) extra_manager_apk(tgt, "com.kowx712.supermanager")
+-#define is_midorisu_apk(tgt) extra_manager_apk(tgt, "com.midori.supermanager")
+-#define test_extra_pkgs(tgt) (is_kowsu_apk(tgt) || is_midorisu_apk(tgt))
++#define test_extra_pkgs(tgt) (is_kowsu_apk(tgt))
+ 
+ #define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list"
+ 
+diff --git a/kernel/manager/apk_sign.c b/kernel/manager/apk_sign.c
+--- a/kernel/manager/apk_sign.c
++++ b/kernel/manager/apk_sign.c
+@@ -331,9 +331,5 @@ bool is_manager_apk(char *path)
+ 	if (check_v2_signature(path, 0x375, "484fcba6e6c43b1fb09700633bf2fb4758f13cb0b2f4457b80d075084b26c588"))
+ 		return true;
+ 
+-	// midori01/KernelSU
+-	if (check_v2_signature(path, 0x0368, "b9ee6759de4794f954883458b722b97ae6527cb7709a051db9a2348c0eea1e42"))
+-		return true;
+-
+ 	return false;
+ }
