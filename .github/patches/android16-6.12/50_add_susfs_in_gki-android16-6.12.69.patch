@@ -1,10 +1,10 @@
 From: github-actions <actions@github.com>
-Date: Wed, 14 Oct 2026 21:31:14 +0000
+Date: Sun, 18 Oct 2026 22:37:00 +0000
 Subject: [PATCH] SUSFS inline hooks for gki-android16-6.12-2026-03
 X-Kernel-Target-Branch: android16-6.12-2026-03
-X-Kernel-Target-Commit: 3659ff23599ff2fcc40f409ab1a9a0eb9e8e9f35
+X-Kernel-Target-Commit: 46bf6b0c9f8b197bd563b6450b730431a7762c16
 X-SUSFS-Source-Ref: origin/gki-android16-6.12
-X-SUSFS-Source-Commit: acb92d4abc922cac384a207744b2db40281a7c7f
+X-SUSFS-Source-Commit: bd2756895e557f339b6304b57e4de131868ea429
 
 ---
  drivers/input/input.c          |  10 ++
@@ -17,7 +17,7 @@ X-SUSFS-Source-Commit: acb92d4abc922cac384a207744b2db40281a7c7f
  fs/proc/base.c                 |  24 ++++
  fs/proc/bootconfig.c           |  13 ++
  fs/proc/fd.c                   |  70 ++++++++++
- fs/proc/task_mmu.c             |  76 ++++++++++-
+ fs/proc/task_mmu.c             |  69 +++++++++-
  fs/proc_namespace.c            | 174 ++++++++++++++++++++++++
  fs/read_write.c                |  10 ++
  fs/readdir.c                   | 126 +++++++++++++++++
@@ -32,7 +32,7 @@ X-SUSFS-Source-Commit: acb92d4abc922cac384a207744b2db40281a7c7f
  security/selinux/hooks.c       |  18 +++
  security/selinux/selinuxfs.c   |  90 +++++++++++++
  security/selinux/ss/services.c | 195 +++++++++++++++++++++++++++
- 25 files changed, 1768 insertions(+), 2 deletions(-)
+ 25 files changed, 1761 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/input/input.c b/drivers/input/input.c
 index 372c9df90..66d671b76 100644
@@ -1348,7 +1348,7 @@ index 5e391cbca..b6d2e1628 100644
  	show_fd_locks(m, file, files);
  	if (seq_has_overflowed(m))
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index 7294b1481..415578a9a 100644
+index 7294b1481..1f9004cad 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -27,6 +27,9 @@
@@ -1448,23 +1448,7 @@ index 7294b1481..415578a9a 100644
  		last_vma_end = vma->vm_end;
  
  		/*
-@@ -1463,8 +1519,15 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
- 
- 			/* Case 4 above */
- 			if (vma->vm_end > last_vma_end) {
-+#ifdef CONFIG_KSU_SUSFS_SUS_MAP
-+				if (!vma->vm_file || !(SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))) {
-+					smap_gather_stats(vma, &mss, last_vma_end);
-+					last_vma_end = vma->vm_end;
-+				}
-+#else
- 				smap_gather_stats(vma, &mss, last_vma_end);
- 				last_vma_end = vma->vm_end;
-+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
- 			}
- 		}
- 	} for_each_vma(vmi, vma);
-@@ -2255,6 +2318,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -2255,6 +2311,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  	while (count && (start_vaddr < end_vaddr)) {
  		int len;
  		unsigned long end;
@@ -1474,7 +1458,7 @@ index 7294b1481..415578a9a 100644
  
  		pm.pos = 0;
  		end = (start_vaddr + PAGEMAP_WALK_SIZE) & PAGEMAP_WALK_MASK;
-@@ -2264,7 +2330,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -2264,7 +2323,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  		ret = mmap_read_lock_killable(mm);
  		if (ret)
  			goto out_free;

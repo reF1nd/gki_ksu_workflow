@@ -1,10 +1,10 @@
 From: github-actions <actions@github.com>
-Date: Wed, 14 Oct 2026 21:31:26 +0000
+Date: Sun, 18 Oct 2026 22:37:14 +0000
 Subject: [PATCH] SUSFS inline hooks for gki-android16-6.12-2026-09
 X-Kernel-Target-Branch: android16-6.12-2026-09
-X-Kernel-Target-Commit: 9570b84cacfca431f7883fdaced3d4447a7b849b
+X-Kernel-Target-Commit: 9257cac5f5440a3f5492477d5ac82dd722703da9
 X-SUSFS-Source-Ref: origin/gki-android16-6.12
-X-SUSFS-Source-Commit: acb92d4abc922cac384a207744b2db40281a7c7f
+X-SUSFS-Source-Commit: bd2756895e557f339b6304b57e4de131868ea429
 
 ---
  drivers/input/input.c          |  10 ++
@@ -32,7 +32,7 @@ X-SUSFS-Source-Commit: acb92d4abc922cac384a207744b2db40281a7c7f
  security/selinux/hooks.c       |  18 +++
  security/selinux/selinuxfs.c   |  90 +++++++++++++
  security/selinux/ss/services.c | 195 +++++++++++++++++++++++++++
- 25 files changed, 1761 insertions(+), 3 deletions(-)
+ 25 files changed, 1762 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/input/input.c b/drivers/input/input.c
 index 372c9df90..66d671b76 100644
@@ -1348,7 +1348,7 @@ index 5e391cbca..b6d2e1628 100644
  	show_fd_locks(m, file, files);
  	if (seq_has_overflowed(m))
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index c79267d5f..bd2a2c838 100644
+index c79267d5f..00d1fa464 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -27,6 +27,9 @@
@@ -1433,19 +1433,19 @@ index c79267d5f..bd2a2c838 100644
  	if (!vma_data_pages(vma))
  		goto show_pad;
  
-@@ -1617,7 +1666,10 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
- 			ret = PTR_ERR(vma);
+@@ -1618,6 +1667,11 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
  			goto out_unlock;
  		}
--
+ 
 +#ifdef CONFIG_KSU_SUSFS_SUS_MAP
 +		if (vma->vm_file && SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))
 +			goto bypass_orig_flow;
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP
++
  		if (vma->vm_start < last_vma_end) {
  			/*
  			 * After retaking the lock, already reported VMA grew
-@@ -1630,6 +1682,9 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
+@@ -1630,6 +1684,9 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
  			/* Found next unreported VMA, start from its beginning */
  			smap_gather_stats(priv, vma, &mss);
  		}
@@ -1455,7 +1455,7 @@ index c79267d5f..bd2a2c838 100644
  		last_vma_end = vma->vm_end;
  
  		/*
-@@ -2449,6 +2504,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -2449,6 +2506,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  	while (count && (start_vaddr < end_vaddr)) {
  		int len;
  		unsigned long end;
@@ -1465,7 +1465,7 @@ index c79267d5f..bd2a2c838 100644
  
  		pm.pos = 0;
  		end = (start_vaddr + PAGEMAP_WALK_SIZE) & PAGEMAP_WALK_MASK;
-@@ -2458,7 +2516,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -2458,7 +2518,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  		ret = mmap_read_lock_killable(mm);
  		if (ret)
  			goto out_free;
