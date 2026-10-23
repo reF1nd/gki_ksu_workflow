@@ -23,6 +23,10 @@ on:
         required: false
         type: boolean
         default: true
+      use_nomount:
+        required: false
+        type: boolean
+        default: true
       use_extra_features:
         required: false
         type: boolean
@@ -107,7 +111,8 @@ jobs:
       SUSFS_SUFFIX: ${{ inputs.use_susfs && '-SUSFS' || '' }}
       ADIOS_SUFFIX: ${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-ADIOS' || '' }}
       ZRAM_SUFFIX: ${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-LZ4ZSTD' || '' }}
-      CCACHE_DIR: ${{ github.workspace }}/.ccache-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}
+      NM_SUFFIX: ${{ inputs.use_nomount && '-NM' || '' }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}${{ inputs.use_nomount && '-nm' || '' }}
       CCACHE_COMPILERCHECK: content
       CCACHE_SLOPPINESS: file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,modules
 
@@ -154,9 +159,9 @@ jobs:
         id: cache-restore
         uses: ./.github/actions/restore-cache-retry
         with:
-          path: .ccache-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}
-          key: ${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ steps.cfg.outputs.asb_date }}${{ steps.cfg.outputs.r_suffix }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}-${{ github.run_id }}
-          restore-keys: ${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ steps.cfg.outputs.asb_date }}${{ steps.cfg.outputs.r_suffix }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}-
+          path: .ccache-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}${{ inputs.use_nomount && '-nm' || '' }}
+          key: ${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ steps.cfg.outputs.asb_date }}${{ steps.cfg.outputs.r_suffix }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}${{ inputs.use_nomount && '-nm' || '' }}-${{ github.run_id }}
+          restore-keys: ${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ steps.cfg.outputs.asb_date }}${{ steps.cfg.outputs.r_suffix }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}${{ inputs.use_nomount && '-nm' || '' }}-
 
       - name: Setup Ccache Wrappers
         if: inputs.use_ccache
@@ -419,6 +424,20 @@ jobs:
         if: inputs.use_adios && inputs.kernel_version == '6.1'
         run: echo "::warning::ADIOS is supported only for kernels 6.6 and 6.12; this build will continue without ADIOS."
 
+      - name: Setup NoMount
+        if: inputs.use_nomount
+        working-directory: kernel_workspace/common
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git clone --filter=blob:none https://github.com/maxsteeel/nomount.git NoMount
+          NOMOUNT_TAG=$(gh release view --repo maxsteeel/nomount --json tagName -q .tagName 2>/dev/null || git -C NoMount describe --tags $(git -C NoMount rev-list --tags -n 1))
+          git -C NoMount checkout "tags/$NOMOUNT_TAG"
+          echo "NOMOUNT_TAG=$NOMOUNT_TAG" >> $GITHUB_ENV
+          ln -sfn ../NoMount/kernel/src fs/nomount
+          grep -q "nomount" fs/Makefile || echo 'obj-$(CONFIG_NOMOUNT) += nomount/' >> fs/Makefile
+          grep -q "fs/nomount/Kconfig" fs/Kconfig || { awk '{a[NR]=$0} /^endmenu/{l=NR} END{for(i=1;i<=NR;i++){if(i==l)print "source \"fs/nomount/Kconfig\"";print a[i]}}' fs/Kconfig > fs/Kconfig.tmp && mv fs/Kconfig.tmp fs/Kconfig; }
+
       - name: Determine Kernel Localversion
         id: localversion
         working-directory: kernel_workspace/common
@@ -427,7 +446,7 @@ jobs:
             final_klv="${{ inputs.kernel_localversion }}"
             [[ "$final_klv" == -* ]] || final_klv="-$final_klv"
           else
-            suffix="-ksu${{ inputs.use_susfs && '-sus' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}"
+            suffix="-ksu${{ inputs.use_susfs && '-sus' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_nomount && '-nomount' || '' }}"
             kmi=$(sed -nE 's/^[[:space:]]*KMI_GENERATION=([0-9]+).*$/\1/p' build.config.constants build.config.common 2>/dev/null | head -n 1 || true)
             final_klv="-${{ steps.cfg.outputs.android_version }}${kmi:+-$kmi}$suffix"
           fi
@@ -449,6 +468,7 @@ jobs:
           use_droidspaces: ${{ inputs.use_droidspaces }}
           use_rekernel: ${{ inputs.use_rekernel }}
           use_vpnhide: ${{ inputs.use_vpnhide }}
+          use_nomount: ${{ inputs.use_nomount }}
           use_adios: ${{ inputs.use_adios }}
           use_lz4_zstd: ${{ inputs.use_lz4_zstd }}
           resukisu_hook_mode: ${{ inputs.resukisu_hook_mode }}
@@ -499,6 +519,15 @@ jobs:
               popd > /dev/null
             fi
           }
+          save_nomount_commit() {
+            if [ "${{ inputs.use_nomount }}" = "true" ] && [ -d "${{ github.workspace }}/kernel_workspace/common/NoMount" ]; then
+              pushd "${{ github.workspace }}/kernel_workspace/common/NoMount" > /dev/null
+              git rev-parse HEAD > "$COMMIT_DIR/nomount_commit"
+              git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M %z' HEAD > "$COMMIT_DIR/nomount_date"
+              echo "${NOMOUNT_TAG}" > "$COMMIT_DIR/nomount_tag"
+              popd > /dev/null
+            fi
+          }
           case "${{ inputs.variant }}" in
             KowSU)
               save_ksu_commit kowsu
@@ -529,11 +558,12 @@ jobs:
           save_rekernel_commit
           save_rekernel_x_commit
           save_vpnhide_commit
+          save_nomount_commit
 
       - name: Upload Commit Info
         uses: actions/upload-artifact@v7
         with:
-          name: commit-info-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}
+          name: commit-info-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.NM_SUFFIX }}
           path: kernel_workspace/common/commit_info/
           retention-days: 1
 
@@ -568,7 +598,7 @@ jobs:
         if: inputs.ksu_debug
         uses: actions/upload-artifact@v7
         with:
-          name: vmlinux-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}
+          name: vmlinux-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}${{ env.NM_SUFFIX }}
           path: kernel_workspace/common/out/vmlinux.zst
           retention-days: 1
 
@@ -577,7 +607,7 @@ jobs:
         run: |
           IMAGE="common/out/arch/arm64/boot/Image"
           [ -f "$IMAGE" ] || { echo "Binary Missing!"; exit 1; }
-          ZIP_NAME="${{ inputs.variant }}_Kernel-${{ inputs.kernel_version }}.${{ steps.cfg.outputs.sub_level }}${{ steps.cfg.outputs.r_suffix }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}.zip"
+          ZIP_NAME="${{ inputs.variant }}_Kernel-${{ inputs.kernel_version }}.${{ steps.cfg.outputs.sub_level }}${{ steps.cfg.outputs.r_suffix }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}${{ env.NM_SUFFIX }}.zip"
           git clone --depth 1 --branch ${{ steps.cfg.outputs.anykernel_branch }} https://github.com/midori01/AnyKernel3 anykernel
           cp "$IMAGE" anykernel/
           cd anykernel && rm -rf .git && zip -r9 "../$ZIP_NAME" *
@@ -587,11 +617,11 @@ jobs:
         if: inputs.use_ccache
         uses: actions/cache/save@v6
         with:
-          path: .ccache-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}
-          key: ${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ steps.cfg.outputs.asb_date }}${{ steps.cfg.outputs.r_suffix }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}-${{ github.run_id }}
+          path: .ccache-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}${{ inputs.use_nomount && '-nm' || '' }}
+          key: ${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ steps.cfg.outputs.asb_date }}${{ steps.cfg.outputs.r_suffix }}-${{ inputs.variant }}${{ inputs.use_susfs && '-susfs' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_lz4_zstd && inputs.kernel_version == '6.12' && '-lz4-zstd' || '' }}${{ inputs.use_nomount && '-nm' || '' }}-${{ github.run_id }}
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Kernel-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}${{ steps.cfg.outputs.r_suffix }}
+          name: Kernel-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}${{ env.NM_SUFFIX }}${{ steps.cfg.outputs.r_suffix }}
           path: kernel_workspace/${{ env.ZIP_NAME }}

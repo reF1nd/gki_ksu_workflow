@@ -5,9 +5,9 @@
 # Description: Automated GitHub Actions sync tool for SUSFS inline-hook patches
 #              with zero-offset verification and substantive code diff detection.
 # Location:    .github/scripts/sync_susfs_patches.py
-# Author:      midori01 <lv@lvlv.lv>, Gemini
-# Version:     3.1.0
-# Date:        2026-09-26
+# Author:      midori01 <lv@lvlv.lv>, Gemini 3.8 Flash, Claude Opus 5.5
+# Version:     3.2.0
+# Date:        2026-10-21
 # ==============================================================================
 
 import argparse
@@ -644,6 +644,25 @@ def extract_substantive_code_diff(patch_text):
 
     return "\n".join(code_lines).strip()
 
+def find_stale_lts_patch(pdir, kmi, lts_fname, claimed_fnames):
+    """
+    Locates the previous LTS patch left behind after the LTS branch bumped its SUBLEVEL,
+    so it can be renamed to the new filename instead of leaving an orphaned copy.
+    """
+    if not os.path.isdir(pdir):
+        return None
+    prefix = f"50_add_susfs_in_gki-{kmi}."
+    for name in sorted(os.listdir(pdir)):
+        if not (name.startswith(prefix) and name.endswith(".patch")):
+            continue
+        if name == lts_fname or name in claimed_fnames:
+            continue
+        with open(os.path.join(pdir, name), "r", encoding="utf-8", errors="replace") as fp:
+            head = fp.read(4096)
+        if re.search(r"^Subject:.*-lts\s*$", head, re.M):
+            return name
+    return None
+
 def main():
     parser = argparse.ArgumentParser(
         description="Sync and generate 0-offset SUSFS patches for all kernels in GitHub Actions."
@@ -774,6 +793,7 @@ def main():
 
         # Generation Mode
         grand_results = {}
+        lts_renames = {}
         for kv in selected_kvs:
             kcfg = KERNEL_CONFIGS[kv]
             kmi = kcfg["kmi"]
@@ -823,6 +843,10 @@ def main():
                     raise RuntimeError(f"Patch validation failed for {label}; no patches will be written.")
                 kv_results[sk] = (p_content, is_ok, tinfo["filename"], pdir)
             grand_results[kv] = kv_results
+            claimed_fnames = {t["filename"] for t in targets.values()}
+            for sk in sub_keys:
+                if targets[sk].get("is_lts"):
+                    lts_renames[kv] = (targets[sk]["filename"], claimed_fnames, kmi)
 
         # Summary Display
         print("\n" + "=" * 65)
@@ -839,10 +863,18 @@ def main():
             new_count = 0
             updated_count = 0
             unchanged_count = 0
+            renamed_count = 0
 
             for kv, results in grand_results.items():
                 for sk, (content, is_ok, fname, pdir) in results.items():
                     target_file = os.path.join(pdir, fname)
+                    lts_info = lts_renames.get(kv)
+                    if lts_info and lts_info[0] == fname and not os.path.isfile(target_file):
+                        stale = find_stale_lts_patch(pdir, lts_info[2], fname, lts_info[1])
+                        if stale:
+                            os.rename(os.path.join(pdir, stale), target_file)
+                            log(f"LTS SUBLEVEL bumped: renamed {stale} -> {fname}", level="PASS")
+                            renamed_count += 1
                     existed = os.path.isfile(target_file)
                     if existed:
                         with open(target_file, "r", encoding="utf-8", errors="replace") as fp:
@@ -863,7 +895,7 @@ def main():
                     with open(target_file, "w", encoding="utf-8") as fp:
                         fp.write(content)
 
-            log(f"Sync complete: {new_count} new, {updated_count} updated, {unchanged_count} unchanged.", level="PASS")
+            log(f"Sync complete: {new_count} new, {renamed_count} renamed, {updated_count} updated, {unchanged_count} unchanged.", level="PASS")
         else:
             log("Dry-run complete. No files were written to disk.", level="INFO")
 

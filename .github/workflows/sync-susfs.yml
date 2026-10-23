@@ -149,7 +149,16 @@ jobs:
         with:
           pattern: patches-*
           merge-multiple: true
-          path: .github/patches/
+          path: /tmp/synced_patches/
+
+      - name: Mirror Synced Patches
+        run: |
+          for d in /tmp/synced_patches/*/; do
+            SUB="$(basename "$d")"
+            echo "[+] Mirroring synced SUSFS patches for $SUB (propagates LTS SUBLEVEL renames)..."
+            rm -f .github/patches/"$SUB"/50_add_susfs_in_gki*
+            cp "$d"50_add_susfs_in_gki* .github/patches/"$SUB"/
+          done
 
       - name: Commit and Push Changes
         run: |

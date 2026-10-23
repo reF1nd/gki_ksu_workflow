@@ -124,6 +124,8 @@ The following devices have been confirmed to work with kernels built by this wor
 | Xiaomi | Xiaomi 17 series (Snapdragon) |
 | Xiaomi | REDMI K90 Pro Max (Snapdragon) |
 | Tecno | Tecno Camon 40 Pro 4G (Helio) |
+| Motorola | Moto Edge 70 Max (Snapdragon) |
+| Lenovo | Legion Y70 2026 (Snapdragon) |
 
 > [!NOTE]
 > **Compatibility Notes:**

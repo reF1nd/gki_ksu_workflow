@@ -46,6 +46,10 @@ inputs:
     description: 'Set to "true" to inject VPNHide configs'
     required: false
     default: 'false'
+  use_nomount:
+    description: 'Set to "true" to inject NoMount configs'
+    required: false
+    default: 'false'
   use_adios:
     description: 'Set to "true" to inject ADIOS configs (kernel 6.6 and 6.12 only)'
     required: false
@@ -197,6 +201,12 @@ runs:
         if [ "${{ inputs.use_vpnhide }}" = "true" ]; then
           cat >> $DEFCONFIG <<-'EOF'
         CONFIG_VPNHIDE=y
+        EOF
+        fi
+
+        if [ "${{ inputs.use_nomount }}" = "true" ]; then
+          cat >> $DEFCONFIG <<-'EOF'
+        CONFIG_NOMOUNT=y
         EOF
         fi
 
