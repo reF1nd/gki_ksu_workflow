@@ -124,6 +124,8 @@
 | Xiaomi | Xiaomi 17 시리즈 (Snapdragon) |
 | Xiaomi | REDMI K90 Pro Max (Snapdragon) |
 | Tecno | Tecno Camon 40 Pro 4G (Helio) |
+| Motorola | Moto Edge 70 Max (Snapdragon) |
+| Lenovo | Legion Y70 2026 (Snapdragon) |
 
 > [!NOTE]
 > **호환성 안내**

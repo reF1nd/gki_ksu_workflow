@@ -1,8 +1,8 @@
 From: github-actions <actions@github.com>
-Date: Mon, 19 Oct 2026 16:46:39 +0000
+Date: Mon, 19 Oct 2026 20:08:27 +0000
 Subject: [PATCH] SUSFS inline hooks for gki-android16-6.12-2026-06
 X-Kernel-Target-Branch: android16-6.12-2026-06
-X-Kernel-Target-Commit: 118d57b9152c06207ffd73456e34d2bb3019a6b2
+X-Kernel-Target-Commit: d0970462108ad572ca477673bba0d0070d3b83e5
 X-SUSFS-Source-Ref: origin/gki-android16-6.12
 X-SUSFS-Source-Commit: 9c9f19d8395693327c78df36569b44e94c187b8a
 
