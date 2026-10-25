@@ -120,12 +120,14 @@
 
 | 品牌 | 型号 |
 | :--- | :--- |
-| Google | Pixel 7/8/9/10 系列 (Tensor) |
+| Google | Pixel 7/8/9/10/11 系列 (Tensor) |
 | Xiaomi | Xiaomi 17 系列 (Snapdragon) |
 | Xiaomi | REDMI K90 Pro Max (Snapdragon) |
+| Xiaomi | POCO F8 Ultra (Snapdragon) |
 | Tecno | Tecno Camon 40 Pro 4G (Helio) |
 | Motorola | Moto Edge 70 Max (Snapdragon) |
 | Lenovo | Legion Y70 2026 (Snapdragon) |
+| Lenovo | Legion Y700 Infinite (Snapdragon) |
 
 > [!NOTE]
 > **兼容性说明：**
