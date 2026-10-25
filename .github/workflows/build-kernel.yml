@@ -196,7 +196,7 @@ jobs:
               branch="${{ steps.cfg.outputs.android_version }}-${{ inputs.kernel_version }}-lts"
               KERNEL_TAR="${branch}.tar.gz"
               if [ "${{ inputs.source_mirror }}" = "google" ]; then
-                KERNEL_BASE_URL="https://android.googlesource.com/kernel/common/+archive/refs/heads/${branch}"
+                KERNEL_BASE_URL="https://android.googlesource.com/kernel/common/+archive/refs/heads"
               else
                 KERNEL_BASE_URL="$RELEASE_MIRROR"
               fi ;;
@@ -205,7 +205,7 @@ jobs:
                 branch="${{ steps.cfg.outputs.android_version }}-${{ inputs.kernel_version }}-${{ steps.cfg.outputs.asb_date }}"
                 KERNEL_TAR="${branch}.tar.gz"
                 if [ "${{ inputs.source_mirror }}" = "google" ]; then
-                  KERNEL_BASE_URL="https://android.googlesource.com/kernel/common/+archive/refs/heads/${branch}"
+                  KERNEL_BASE_URL="https://android.googlesource.com/kernel/common/+archive/refs/heads"
                 else
                   KERNEL_BASE_URL="$RELEASE_MIRROR"
                 fi
@@ -213,7 +213,7 @@ jobs:
                 tag="${{ steps.cfg.outputs.android_version }}-${{ inputs.kernel_version }}-${{ steps.cfg.outputs.asb_date }}_${{ steps.cfg.outputs.r_version }}"
                 KERNEL_TAR="${tag}.tar.gz"
                 if [ "${{ inputs.source_mirror }}" = "google" ]; then
-                  KERNEL_BASE_URL="https://android.googlesource.com/kernel/common/+archive/refs/tags/${tag}"
+                  KERNEL_BASE_URL="https://android.googlesource.com/kernel/common/+archive/refs/tags"
                 else
                   KERNEL_BASE_URL="$RELEASE_MIRROR"
                 fi
@@ -584,7 +584,9 @@ jobs:
           export KBUILD_BUILD_HOST="${{ inputs.build_host }}"
           export KBUILD_BUILD_USER="${{ inputs.build_user }}"
           export RKX_VERSION="${RKX_VERSION}"
+          export KBUILD_ABS_SRCTREE=1
           make -j$(nproc) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error gki_defconfig
+          make -j$(nproc) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error headers
           make -j$(nproc) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error Image
           [ "${{ inputs.use_ccache }}" = "true" ] && ccache -s || true
 
