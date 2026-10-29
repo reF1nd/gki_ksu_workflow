@@ -1,10 +1,10 @@
 From: github-actions <actions@github.com>
-Date: Sat, 24 Oct 2026 13:51:50 +0000
+Date: Thu, 29 Oct 2026 10:16:16 +0000
 Subject: [PATCH] SUSFS inline hooks for gki-android16-6.12-lts
 X-Kernel-Target-Branch: android16-6.12-lts
-X-Kernel-Target-Commit: 571d9c1bbba0039f8fa842785e434862ba744377
+X-Kernel-Target-Commit: bf2788afc685d0a7a59d2ab8d1ecae170aec9171
 X-SUSFS-Source-Ref: origin/gki-android16-6.12
-X-SUSFS-Source-Commit: 3ff9fd3fac5bb01b71b2cfe96c612d469710fb74
+X-SUSFS-Source-Commit: 519c86c5d8ad3832ff4a2e1a81dc1b81076f1693
 
 ---
  block/ioprio.c               |  22 +++-
@@ -229,7 +229,7 @@ index 965fdc593..80d5ff9b2 100644
  	free_bprm(bprm);
  
 diff --git a/fs/namei.c b/fs/namei.c
-index bdc243fc4..665c974ad 100644
+index 3184a0649..7f4cf191e 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -40,10 +40,21 @@
@@ -492,7 +492,7 @@ index bdc243fc4..665c974ad 100644
  
  	nd->flags |= op->intent;
  
-@@ -3887,9 +4016,32 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
+@@ -3891,9 +4020,32 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
  		const struct open_flags *op,
  		struct file *file)
  {
@@ -525,7 +525,7 @@ index bdc243fc4..665c974ad 100644
  	if (unlikely(error))
  		return error;
  	error = mnt_want_write(path.mnt);
-@@ -3903,24 +4055,61 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
+@@ -3907,24 +4059,61 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
  	mnt_drop_write(path.mnt);
  out:
  	path_put(&path);
@@ -587,7 +587,7 @@ index bdc243fc4..665c974ad 100644
  	struct file *file;
  	int error;
  
-@@ -3937,10 +4126,33 @@ static struct file *path_openat(struct nameidata *nd,
+@@ -3941,10 +4130,33 @@ static struct file *path_openat(struct nameidata *nd,
  		while (!(error = link_path_walk(s, nd)) &&
  		       (s = open_last_lookups(nd, file, op)) != NULL)
  			;
@@ -621,7 +621,7 @@ index bdc243fc4..665c974ad 100644
  	if (likely(!error)) {
  		if (likely(file->f_mode & FMODE_OPENED))
  			return file;
-@@ -5251,6 +5463,11 @@ int readlink_copy(char __user *buffer, int buflen, const char *link)
+@@ -5255,6 +5467,11 @@ int readlink_copy(char __user *buffer, int buflen, const char *link)
   *
   * Does not call security hook.
   */
@@ -633,7 +633,7 @@ index bdc243fc4..665c974ad 100644
  int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  {
  	struct inode *inode = d_inode(dentry);
-@@ -5260,7 +5477,18 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
+@@ -5264,7 +5481,18 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  
  	if (unlikely(!(inode->i_opflags & IOP_DEFAULT_READLINK))) {
  		if (unlikely(inode->i_op->readlink))
@@ -652,7 +652,7 @@ index bdc243fc4..665c974ad 100644
  
  		if (!d_is_symlink(dentry))
  			return -EINVAL;
-@@ -5276,6 +5504,15 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
+@@ -5280,6 +5508,15 @@ int vfs_readlink(struct dentry *dentry, char __user *buffer, int buflen)
  		if (IS_ERR(link))
  			return PTR_ERR(link);
  	}
