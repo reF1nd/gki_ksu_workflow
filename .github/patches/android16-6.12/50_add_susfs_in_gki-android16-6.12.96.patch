@@ -1,10 +1,10 @@
 From: github-actions <actions@github.com>
-Date: Thu, 29 Oct 2026 10:16:16 +0000
+Date: Fri, 30 Oct 2026 00:19:39 +0000
 Subject: [PATCH] SUSFS inline hooks for gki-android16-6.12-lts
 X-Kernel-Target-Branch: android16-6.12-lts
-X-Kernel-Target-Commit: bf2788afc685d0a7a59d2ab8d1ecae170aec9171
+X-Kernel-Target-Commit: 815f36e3050a885dedbff621d4dd16c17dc81a0b
 X-SUSFS-Source-Ref: origin/gki-android16-6.12
-X-SUSFS-Source-Commit: 519c86c5d8ad3832ff4a2e1a81dc1b81076f1693
+X-SUSFS-Source-Commit: 6b60a305d418148bd311f4fc9bddedc82d99e1fc
 
 ---
  block/ioprio.c               |  22 +++-
@@ -2617,7 +2617,7 @@ index 29a9bf854..18456f388 100644
  	audit_log_format(ab, " tclass=%s", tclass);
  
 diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
-index 2a49b3647..eef0cd181 100644
+index feb4826d5..a83ea4d12 100644
 --- a/security/selinux/hooks.c
 +++ b/security/selinux/hooks.c
 @@ -110,6 +110,10 @@
@@ -2631,7 +2631,7 @@ index 2a49b3647..eef0cd181 100644
  
  /*
   * ANDROID: selinux_state is part of the KMI, and backporting capabilities into
-@@ -6624,6 +6628,17 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
+@@ -6642,6 +6646,17 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
  	return -EINVAL;
  }
  
@@ -2649,7 +2649,7 @@ index 2a49b3647..eef0cd181 100644
  static int selinux_ismaclabel(const char *name)
  {
  	return (strcmp(name, XATTR_SELINUX_SUFFIX) == 0);
-@@ -7254,8 +7269,11 @@ static struct security_hook_list selinux_hooks[] __ro_after_init = {
+@@ -7272,8 +7287,11 @@ static struct security_hook_list selinux_hooks[] __ro_after_init = {
  	LSM_HOOK_INIT(getselfattr, selinux_getselfattr),
  	LSM_HOOK_INIT(setselfattr, selinux_setselfattr),
  	LSM_HOOK_INIT(getprocattr, selinux_getprocattr),
