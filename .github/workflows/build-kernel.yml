@@ -378,6 +378,17 @@ jobs:
               ;;
           esac
 
+      - name: Apply KernelSU-XX Branch Link Execve Fallback
+        if: inputs.variant == 'KernelSU-XX' && inputs.kernelsu_xx_hook_mode == 'branch link hijacking'
+        working-directory: kernel_workspace/common
+        run: |
+          FIX="${{ github.workspace }}/.github/patches/kernelsu-xx-bl-execve-fallback.patch"
+          if patch -p1 -d KernelSU --forward --dry-run < "$FIX" > /dev/null 2>&1; then
+            patch -p1 -d KernelSU --forward < "$FIX"
+          else
+            echo "::warning::Branch link execve fallback does not apply (likely merged upstream), skipping."
+          fi
+
       - name: Apply KernelSU-XX Syscall Table Diagnostics (debug only)
         if: inputs.ksu_debug && inputs.variant == 'KernelSU-XX'
         working-directory: kernel_workspace/common
