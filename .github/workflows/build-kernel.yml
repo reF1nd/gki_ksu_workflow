@@ -385,8 +385,12 @@ jobs:
           FIX="${{ github.workspace }}/.github/patches/kernelsu-xx-bl-execve-fallback.patch"
           if patch -p1 -d KernelSU --forward --dry-run < "$FIX" > /dev/null 2>&1; then
             patch -p1 -d KernelSU --forward < "$FIX"
+          elif patch -p1 -d KernelSU --reverse --dry-run < "$FIX" > /dev/null 2>&1; then
+            echo "Branch link execve fallback already present in KernelSU-XX, skipping."
           else
-            echo "::warning::Branch link execve fallback does not apply (likely merged upstream), skipping."
+            echo "::error::Branch link execve fallback no longer applies to KernelSU-XX; without it preinit breaks when KernelPatch owns execve. Update .github/patches/kernelsu-xx-bl-execve-fallback.patch."
+            patch -p1 -d KernelSU --forward --dry-run < "$FIX" || true
+            exit 1
           fi
 
       - name: Setup Manual Hooks (ReSukiSU/XX only)
