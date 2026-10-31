@@ -1,0 +1,144 @@
+diff --git a/kernel/downstream/sct_diag.h b/kernel/downstream/sct_diag.h
+new file mode 100644
+index 00000000..862d5dde
+--- /dev/null
++++ b/kernel/downstream/sct_diag.h
+@@ -0,0 +1,85 @@
++// SPDX-License-Identifier: GPL-2.0-only
++#ifndef __KSU_H_SCT_DIAG
++#define __KSU_H_SCT_DIAG
++
++/**
++ * sct_diag.h - diagnostics for sys_call_table slots that are rewritten
++ * before KernelSU gets to hook them.
++ *
++ * Records the native execve / execveat slots at early_initcall, then checks
++ * them after every initcall and reports the first initcall that changed them.
++ * Checkpoints inside kernelsu_init narrow it down further.
++ */
++
++#if defined(CONFIG_ARM64) && !defined(MODULE)
++#include <trace/events/initcall.h>
++
++static const unsigned int ksu_sct_diag_nr[] = { 221, 281 }; // execve, execveat
++static void *ksu_sct_diag_seen[ARRAY_SIZE(ksu_sct_diag_nr)];
++
++static void *ksu_sct_diag_slot(unsigned int nr)
++{
++	return READ_ONCE(((void *const *)sys_call_table)[nr]);
++}
++
++static bool ksu_sct_diag_in_text(void *p)
++{
++	extern char _stext[], _etext[];
++
++	return (uintptr_t)p > (uintptr_t)_stext && (uintptr_t)p < (uintptr_t)_etext;
++}
++
++static void ksu_sct_diag_dump(const char *where)
++{
++	size_t i;
++
++	for (i = 0; i < ARRAY_SIZE(ksu_sct_diag_nr); i++) {
++		void *p = ksu_sct_diag_slot(ksu_sct_diag_nr[i]);
++
++		pr_info("sct_diag: %s: #%u = %px (%pS) in_text: %d\n", where, ksu_sct_diag_nr[i], p, p, ksu_sct_diag_in_text(p));
++		ksu_sct_diag_seen[i] = p;
++	}
++}
++
++static void ksu_sct_diag_initcall_finish(void *data, initcall_t fn, int ret)
++{
++	size_t i;
++
++	for (i = 0; i < ARRAY_SIZE(ksu_sct_diag_nr); i++) {
++		void *p = ksu_sct_diag_slot(ksu_sct_diag_nr[i]);
++
++		if (p == ksu_sct_diag_seen[i])
++			continue;
++
++		pr_info("sct_diag: #%u changed by initcall %pS: %px (%pS) -> %px (%pS)\n",
++			ksu_sct_diag_nr[i], fn, ksu_sct_diag_seen[i], ksu_sct_diag_seen[i], p, p);
++		ksu_sct_diag_seen[i] = p;
++	}
++}
++
++static int __init ksu_sct_diag_early(void)
++{
++	extern char _stext[], _etext[];
++
++	pr_info("sct_diag: _stext: %px _etext: %px sys_call_table: %px\n", _stext, _etext, sys_call_table);
++	ksu_sct_diag_dump("early_initcall");
++
++	if (register_trace_initcall_finish(ksu_sct_diag_initcall_finish, NULL))
++		pr_err("sct_diag: cannot register initcall_finish probe\n");
++
++	return 0;
++}
++early_initcall(ksu_sct_diag_early);
++
++static int __init ksu_sct_diag_late(void)
++{
++	ksu_sct_diag_dump("late_initcall_sync");
++	unregister_trace_initcall_finish(ksu_sct_diag_initcall_finish, NULL);
++	return 0;
++}
++late_initcall_sync(ksu_sct_diag_late);
++#else
++#define ksu_sct_diag_dump(...) do { } while (0)
++#endif
++
++#endif // __KSU_H_SCT_DIAG
+diff --git a/kernel/downstream/vmap_patch.h b/kernel/downstream/vmap_patch.h
+index 447b773a..8af26aa7 100644
+--- a/kernel/downstream/vmap_patch.h
++++ b/kernel/downstream/vmap_patch.h
+@@ -75,7 +75,7 @@ static noinline void read_and_replace_syscall(void *old_ptr, unsigned long sysca
+ 	extern char _stext[], _etext[];
+ 	uintptr_t sc_slot = (uintptr_t)*syscall_slot_addr;
+ 	if (!(sc_slot > (uintptr_t)_stext && sc_slot < (uintptr_t)_etext)) {
+-		pr_info("%s: syscall #%d at 0x%lx NOT pointing to kernel text!\n", __func__, syscall_nr, (long)syscall_slot_addr);
++		pr_info("%s: syscall #%d at 0x%lx NOT pointing to kernel text! value: %px (%pS)\n", __func__, syscall_nr, (long)syscall_slot_addr, (void *)sc_slot, (void *)sc_slot);
+ 		return;
+ 	}
+ 
+diff --git a/kernel/ksu.c b/kernel/ksu.c
+index 40db1874..95243aac 100644
+--- a/kernel/ksu.c
++++ b/kernel/ksu.c
+@@ -96,6 +96,7 @@
+ #include "downstream/tiny_sulog.h"
+ #include "downstream/toolkit.h"
+ #include "downstream/vmap_patch.h"
++#include "downstream/sct_diag.h"
+ 
+ #ifdef CONFIG_KSU_HOSTSREDIRECT
+ #include "downstream/ksu_hostsredirect.h"
+@@ -260,8 +261,11 @@ static int __init kernelsu_init(void)
+ 		return -ENOSYS;
+ 	}
+ 
++	ksu_sct_diag_dump("kernelsu_init: entry");
++
+ #ifdef KSU_CAN_USE_MODULE_BLACKLIST
+ 	ksu_module_blacklist_init(); // Block modules early, before vendor modules are loaded in second stage.
++	ksu_sct_diag_dump("kernelsu_init: after module_blacklist");
+ #endif
+ 	// register features
+ 	ksu_feature_init();
+@@ -277,6 +281,7 @@ static int __init kernelsu_init(void)
+ 	ksu_shell_su_adb_only_init();
+ 
+ 	ksu_core_init();
++	ksu_sct_diag_dump("kernelsu_init: after core_init");
+ 	ksu_supercalls_init();
+ 
+ #if defined(CONFIG_KSU_KPROBES_KSUD) && !defined(CONFIG_KSU_TAMPER_SYSCALL_TABLE) && !defined(CONFIG_KSU_HACK_ARM64_BRANCH_LINK)
+@@ -294,6 +299,7 @@ static int __init kernelsu_init(void)
+ #endif
+ 
+ #ifdef CONFIG_KSU_HACK_ARM64_BRANCH_LINK
++	ksu_sct_diag_dump("kernelsu_init: before branch_link_patch_init");
+ 	ksu_branch_link_patch_init();
+ #endif
+ 
