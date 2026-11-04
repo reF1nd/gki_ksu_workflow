@@ -378,20 +378,22 @@ jobs:
               ;;
           esac
 
-      - name: Skip KernelSU-XX Syscall Table Mirror With Another Hooker
+      - name: Apply KernelSU-XX KernelPatch Compatibility Fixes
         if: inputs.variant == 'KernelSU-XX' && inputs.kernelsu_xx_hook_mode == 'branch link hijacking'
         working-directory: kernel_workspace/common
         run: |
-          FIX="${{ github.workspace }}/.github/patches/kernelsu-xx-mirror-skip-foreign.patch"
-          if patch -p1 -d KernelSU --forward --dry-run < "$FIX" > /dev/null 2>&1; then
-            patch -p1 -d KernelSU --forward < "$FIX"
-          elif patch -p1 -d KernelSU --reverse --dry-run < "$FIX" > /dev/null 2>&1; then
-            echo "Syscall table mirror check already present in KernelSU-XX, skipping."
-          else
-            echo "::error::Syscall table mirror check no longer applies to KernelSU-XX; without it KernelPatch hooks can be lost or crash execve. Update .github/patches/kernelsu-xx-mirror-skip-foreign.patch."
-            patch -p1 -d KernelSU --forward --dry-run < "$FIX" || true
-            exit 1
-          fi
+          for name in kernelsu-xx-bl-execve-fallback kernelsu-xx-mirror-skip-foreign; do
+            FIX="${{ github.workspace }}/.github/patches/$name.patch"
+            if patch -p1 -d KernelSU --forward --dry-run < "$FIX" > /dev/null 2>&1; then
+              patch -p1 -d KernelSU --forward < "$FIX"
+            elif patch -p1 -d KernelSU --reverse --dry-run < "$FIX" > /dev/null 2>&1; then
+              echo "$name already present in KernelSU-XX, skipping."
+            else
+              echo "::error::$name no longer applies to KernelSU-XX; without it KernelPatch can break preinit, lose syscall hooks or crash execve. Update .github/patches/$name.patch."
+              patch -p1 -d KernelSU --forward --dry-run < "$FIX" || true
+              exit 1
+            fi
+          done
 
       - name: Setup Manual Hooks (ReSukiSU/XX only)
         if: >-
