@@ -51,6 +51,11 @@ on:
           - 'branch link hijacking'
           - 'syscall table tampering'
           - 'manual'
+      kernelsu_xx_kpatch_compat:
+        description: 'KernelSU-XX KPatch Compat'
+        required: true
+        default: false
+        type: boolean
       ksu_debug:
         description: 'KernelSU Debug'
         required: true
@@ -88,6 +93,11 @@ on:
         type: boolean
       use_nomount:
         description: 'NoMount'
+        required: true
+        default: true
+        type: boolean
+      use_fgetpriority:
+        description: 'fgetpriority'
         required: true
         default: true
         type: boolean
@@ -312,6 +322,7 @@ jobs:
       use_rekernel: ${{ inputs.use_rekernel }}
       use_vpnhide: ${{ inputs.use_vpnhide }}
       use_nomount: ${{ inputs.use_nomount }}
+      use_fgetpriority: ${{ inputs.use_fgetpriority }}
       use_adios: ${{ inputs.use_adios }}
       use_lz4_zstd: ${{ inputs.use_lz4_zstd }}
       use_extra_features: ${{ inputs.use_extra_features }}
@@ -326,6 +337,7 @@ jobs:
       build_host: ${{ needs.setup.outputs.build_host }}
       resukisu_hook_mode: ${{ inputs.resukisu_hook_mode }}
       kernelsu_xx_hook_mode: ${{ inputs.kernelsu_xx_hook_mode }}
+      kernelsu_xx_kpatch_compat: ${{ inputs.kernelsu_xx_kpatch_compat }}
       ksu_debug: ${{ inputs.ksu_debug }}
 
   release:
@@ -495,6 +507,13 @@ jobs:
             local date=$(cat "${file%_commit}_date")
             out "nomount_line=- **${label}**: [\`$(echo $sha | cut -c1-7)\`](https://github.com/maxsteeel/nomount/commit/$sha) \`$date\`"
           }
+          fgetpriority_line() {
+            local label=$1 file=$2
+            [ -f "$file" ] || return 0
+            local sha=$(cat "$file")
+            local date=$(cat "${file%_commit}_date")
+            out "fgetpriority_line=- **${label}**: [\`$(echo $sha | cut -c1-7)\`](https://github.com/aerath-stuff/fgetpriority/commit/$sha) \`$date\`"
+          }
           if [ -f "commit_info/susfs_commit" ]; then
             sha=$(cat commit_info/susfs_commit)
             out "susfs_commit=\`$(short_sha commit_info/susfs_commit)\`"
@@ -519,6 +538,7 @@ jobs:
           rekernel_x_line "Re:Kernel-X" commit_info/rekernel_x_commit
           vpnhide_line "VPNHide Next" commit_info/vpnhide_commit
           nomount_line "NoMount" commit_info/nomount_commit
+          fgetpriority_line "fgetpriority" commit_info/fgetpriority_commit
           ksu_line KowSU kowsu "$(cat commit_info/kowsu_ksu_repo 2>/dev/null)" commit_info/kowsu_ksu_commit
           ksu_line KernelSU-Next kernelsu_next "$(cat commit_info/kernelsu_next_ksu_repo 2>/dev/null)" commit_info/kernelsu_next_ksu_commit
           ksu_line KernelSU-Official kernelsu_official "$(cat commit_info/kernelsu_official_ksu_repo 2>/dev/null)" commit_info/kernelsu_official_ksu_commit
@@ -543,6 +563,7 @@ jobs:
             ${{ steps.ksu_info.outputs.rekernel_x_line }}
             ${{ steps.ksu_info.outputs.vpnhide_line }}
             ${{ steps.ksu_info.outputs.nomount_line }}
+            ${{ steps.ksu_info.outputs.fgetpriority_line }}
             - **Manager**: Use the manager provided by the selected KernelSU upstream
             > **Spoofed Kernel Build Info**
             ${{ env.RELEASE_UNAME }}

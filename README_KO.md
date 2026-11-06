@@ -31,7 +31,7 @@
 
 ## ⚙️ 설정
 
-커널 버전별 설정은 모두 [`.github/config/kernel_versions.json`](.github/config/kernel_versions.json) 파일에서 통합 관리됩니다. 워크플로우 실행 시 `kernel_version`만 지정하면 커널 버전, 서브 레벨, 컴파일러, Rust 사용 여부, AnyKernel3 브랜치 선택 등 빌드 매트릭스 전체가 자동으로 결정됩니다.
+커널 버전별 설정은 모두 [`.github/config/kernel_versions.json`](.github/config/kernel_versions.json) 파일에서 통합 관리됩니다. 워크플로우 실행 시 `kernel_version`만 지정하면 커널 버전, 서브레벨, 컴파일러, Rust 사용 여부, AnyKernel3 브랜치 선택 등 빌드 매트릭스 전체가 자동으로 결정됩니다.
 
 > [!NOTE]
 > 이 포크는 6.12.23 기본 빌드, 소스 설정 및 필요한 패치를 계속 유지합니다。
@@ -69,6 +69,7 @@
 >   - `branch link hijacking` — KernelSU-XX의 기본값; `CONFIG_KSU_HACK_ARM64_BRANCH_LINK`를 사용하여 커널 text의 분기 명령(`b`/`bl`)을 후크로 직접 리다이렉션하여 트램펄린 오버헤드를 방지하고 ARM64 CFI를 준수
 >   - `syscall table tampering` — `CONFIG_KSU_TAMPER_SYSCALL_TABLE`를 사용하여 `sys_call_table` 항목을 직접 변조하여 간접 분기(`blr`) 오버헤드를 방지하고 Clang CFI를 준수
 >   - `manual` — `scope-min-manual-hooks-v2.3.patch`를 통한 수동 후크
+> - `kernelsu_xx_kpatch_compat` — `branch link hijacking` 사용 시 KernelSU-XX에 KernelPatch 호환 수정(execve 폴백 및 syscall table 미러 건너뛰기)을 적용
 
 > [!TIP]
 > **매트릭스 빌드 동작 방식:** 매트릭스는 항상 배리언트당 정확히 **단 하나의 결과물**만 생성합니다. 활성화된 기능(Droidspaces / SUSFS)은 해당 결과물에 함께 적용됩니다. 5개 배리언트를 모두 선택하면 각 커널 버전의 **각 서브 레벨당 5개의 빌드**가 실행됩니다. `kernel_version`에서 `all`을 선택하면 6.1 / 6.6 / 6.12의 모든 서브 레벨이 병렬로 컴파일되어 기본 구성 기준 총 **45개의 작업(Job)**이 동시에 실행됩니다.
@@ -90,8 +91,8 @@
 | `Inline` | `#ifdef CONFIG_KSU_SUSFS` 블록을 커널 서브시스템 소스에 직접 삽입하는 컴파일 타임 주입 방식입니다. `static_key` 분기를 통해 런타임에 활성/비활성 전환이 가능하며, kprobe나 LSM 후크에 의존하지 않습니다. VFS(`exec`, `open`, `stat`, `readdir`, `statfs`), SELinux(`avc`, `hooks`, `services`), input, mounts, procfs에 내장됩니다. |
 | `De-inlined` | `#ifdef CONFIG_KSU_SUSFS` 인라인 블록을 사용하는 대신 커널 소스에 패치를 적용하여 SUSFS 후크를 통합합니다. 이를 통해 SUSFS 로직이 코어 커널 서브시스템과 더욱 명확하게 분리됩니다. |
 | `Manual` | 커널 소스에 대한 정적 패치 방식입니다. 컴파일 시 자체 후크를 코어 커널 서브시스템에 직접 주입합니다. |
-| `Branch Link Hijacking` | 커널 text 섹션을 스캔하고 호출 위치의 분기 명령(`b`/`bl`)을 후크로 직접 덮어써 트램펄린 오버헤드를 우회하고 Clang CFI를 준수합니다. `CONFIG_KSU_HACK_ARM64_BRANCH_LINK`로 활성화됩니다. |
-| `Syscall Table Tampering` | `sys_call_table`의 함수 포인터(`sys_reboot`, `sys_execve` 등)를 직접 교체하는 고성능 후크 방식입니다. 간접 분기(`blr`) 오버헤드를 방지하고 Clang CFI를 준수합니다. `CONFIG_KSU_TAMPER_SYSCALL_TABLE`로 활성화됩니다. |
+| `Branch Link Hijacking` | 커널 text 섹션을 스캔하고 호출 위치의 분기 명령(`b`/`bl`)을 후크로 직접 덮어써 트램펄린 오버헤드를 우회하고 ARM64 Clang CFI를 준수합니다. `CONFIG_KSU_HACK_ARM64_BRANCH_LINK`로 활성화됩니다. |
+| `Syscall Table Tampering` | sucompat(`sys_execve` 등)과 `sys_reboot`에 사용되는 `sys_call_table`의 함수 포인터를 직접 교체하는 고성능 후크 방식입니다. 간접 분기(`blr`) 오버헤드를 방지하고 Clang CFI를 준수합니다. `CONFIG_KSU_TAMPER_SYSCALL_TABLE`로 활성화됩니다. |
 
 ---
 
@@ -99,18 +100,26 @@
 
 | 기능 | 설명 |
 | :--- | :--- |
-| **커널 버전** | `6.1`, `6.6`, `6.12` 중 단일 버전을 선택하거나 `all`을 통해 전체 버전을 선택할 수 있습니다. 서브 레벨, 리비전, 컴파일러, Rust 설정 등은 중앙 집중식 config에서 자동으로 적용됩니다. |
+| **커널 버전** | `6.1`, `6.6`, `6.12` 중 단일 버전을 선택하거나 `all`을 통해 전체 버전을 선택할 수 있습니다. 서브레벨, 리비전, 컴파일러, Rust 설정 등은 중앙 집중식 config에서 자동으로 적용됩니다. |
 | **소스 미러** | 커널 소스 및 툴체인 다운로드 시 Google 공식 AOSP 미러 또는 자체 호스팅 미러 중에서 선택할 수 있습니다. |
 | **SUSFS 모듈** | SUSFS 활성화 시 최신 [susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module)을 자동으로 찾아 릴리스 노트에 다운로드 링크를 추가합니다. 모든 배리언트의 SUSFS 버전은 단일 `susfs_commit` 입력값을 통해 통합 관리됩니다. |
 | **KSU 툴킷** | 최신 [ksu_toolkit](https://github.com/backslashxx/ksu_toolkit) 모듈을 nightly.link에서 자동으로 찾아 릴리스 노트에 다운로드 링크를 추가합니다. |
-| **Droidspaces** | [Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS)를 활용한 컨테이너 지원 기능으로 SYSVIPC, IPC_NS, PID_NS, DEVTMPFS, NTSync, 네트워킹 기능을 제공합니다. `use_droidspaces` 옵션을 통해 배리언트마다 활성화할 수 있습니다. |
+| **Droidspaces** | [Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS)를 활용한 컨테이너 지원 기능으로 SYSVIPC, IPC_NS, PID_NS, DEVTMPFS, NTSync, 네트워킹 기능을 제공합니다. 배리언트별로 `use_droidspaces` 옵션으로 제어합니다. |
 | **Re:Kernel(-X)** | [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) 및 [Re:Kernel-X](https://github.com/myflavor/ReKernel-X) 모듈을 커널에 직접 내장합니다. 툼스톤(tombstone) 기반 프리즈 복구, 네트워크 트리거 해제, 바인더(binder) 비동기 정리를 제공합니다. `use_rekernel` 옵션으로 제어합니다. |
 | **VPNHide Next** | In-tree kpatch(`CONFIG_VPNHIDE=y`)를 통해 [VPNHide Next](https://github.com/soranerai/vpnhide_next_backend)를 통합하여 동적 LKM에 의존하지 않고 커널 수준에서 VPN 네트워크 인터페이스, 라우팅 규칙 및 소켓 디스크립터를 은닉합니다. 함께 사용되는 `vpnhide-bridge.zip` 모듈 및 매니저 APK(`vpnhide.apk`)의 업스트림 다운로드 링크를 릴리스 노트에 추가합니다. `use_vpnhide` 옵션으로 제어합니다. |
+| **NoMount** | [NoMount](https://github.com/maxsteeel/nomount)를 커널에 직접 내장합니다(`CONFIG_NOMOUNT=y`). 마운트를 생성하거나 `/proc/mounts`를 오염시키지 않고 모듈 파일을 주입·은닉하는 VFS 경로 리디렉션 프레임워크입니다. 함께 사용되는 `NoMount-*.zip` 메타모듈의 업스트림 다운로드 링크를 릴리스 노트에 추가합니다. `use_nomount` 옵션으로 제어합니다. |
+| **fgetpriority** | [fgetpriority](https://github.com/aerath-stuff/fgetpriority)를 커널에 직접 내장합니다(`CONFIG_FGETPRIORITY=y`). 앱이 `getpriority` / `setpriority` / `ioprio_get` / `ioprio_set`로 다른 앱의 UID를 탐지하는 결과를 은닉하며, 모듈 설치가 필요 없습니다. `use_fgetpriority` 옵션으로 제어합니다. |
 | **유니코드 바이패스 수정** | 항상 활성화됩니다. 비표준 유니코드 인코딩을 이용한 파일시스템 우회 공격을 방지하기 위해 커널의 유니코드 정규화 로직을 패치합니다. |
+| **CVE 수정** | 항상 활성화됩니다. 커널 소스에서 CVE-2026-43499(rtmutex) 및 CVE-2026-64560(sighand / POSIX CPU timers)을 검사하고, 수정이 없으면 패치를 적용합니다. 서브레벨별 결과는 릴리스 노트에 표시됩니다. |
+| **네트워크 및 파일시스템** | 항상 활성화됩니다. TCP BBR, IPSET, 향상된 NAT(IPv6 NAT 및 REDIRECT), TMPFS xattr / POSIX ACL. |
 | **ADIOS I/O 스케줄러** | 선택적으로 [ADIOS](https://github.com/firelzrd/adios)를 kernel 6.6 및 6.12 빌드의 내장 기본 멀티큐 I/O 스케줄러로 통합합니다. `use_adios` 옵션으로 활성화하며, kernel 6.1은 변경되지 않습니다. |
-| **LZ4/ZSTD ZRAM 백엔드** | 선택적으로 커널의 LZ4 및 ZSTD 구현을 공식 LZ4 1.10.0 및 Zstandard 1.5.7 릴리스로 업데이트하고 kernel 6.12 (6.12.23에서만 테스트됨) 의 ZRAM 백엔드를 활성화합니다. `use_lz4_zstd` 옵션으로 제어하며, 6.1 및 6.6 빌드는 변경되지 않습니다. |
+| **LZ4/ZSTD ZRAM 백엔드** | 선택적으로 커널의 LZ4 및 ZSTD 구현을 공식 LZ4 1.10.0 및 Zstandard 1.5.7 릴리스로 업데이트하고 커널 6.12(6.12.23에서만 테스트됨)의 ZRAM 백엔드를 활성화합니다. `use_lz4_zstd` 옵션으로 제어하며, 6.1 및 6.6 빌드는 변경되지 않습니다. |
 | **Ccache** | 의존성 설치 완료 후 60초 대기 시간을 두어 컴파일러 캐시를 안전하게 통합합니다. 여러 워크플로우 실행에 걸쳐 안정적이고 강력한 증분 빌드 속도 향상을 제공합니다. |
 | **빌드 메타데이터 커스터마이징** | 컴파일된 이미지에 포함되는 `커널 이름`, `빌드 타임스탬프`, `사용자 이름`, `호스트 이름` 문자열을 자유롭게 설정할 수 있습니다. |
+| **추가 기능 및 수정** | [midori01/KernelSU](https://github.com/midori01/KernelSU) 각 브랜치 상단에 포함된 추가 기능 및 수정 커밋을 해당 배리언트에 적용합니다. `use_extra_features` 옵션으로 제어합니다. |
+| **KSU 디버그** | `CONFIG_KSU_DEBUG=y`로 빌드하고 eBPF 디버깅용 zstd 압축 `vmlinux` 아티팩트를 업로드합니다. `ksu_debug` 옵션으로 제어합니다. |
+| **업스트림 동기화** | 빌드 전에 `kernel_versions.json`의 커널 버전과 소스를 업데이트하고 업스트림에서 SUSFS 패치를 다시 생성합니다. `sync_upstream` 옵션으로 제어합니다. |
+| **릴리스 유형** | `release`는 정식 릴리스를 게시하고 커널 버전별로 최신 2개를 유지하며, `pre-release`는 프리릴리스를 게시하고, `no-release`는 빌드 산출물만 업로드합니다. |
 
 ---
 

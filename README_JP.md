@@ -69,6 +69,7 @@
 >   - `branch link hijacking` — KernelSU-XX のデフォルト；`CONFIG_KSU_HACK_ARM64_BRANCH_LINK` を使用してカーネル text 内の分岐命令（`b`/`bl`）を直接フックへリダイレクトし、トランポリンオーバーヘッドを回避しつつ ARM64 CFI に適合
 >   - `syscall table tampering` — `CONFIG_KSU_TAMPER_SYSCALL_TABLE` を使用して `sys_call_table` の関数ポインタを直接改ざんし、間接分岐（`blr`）オーバーヘッドを回避しつつ Clang CFI に適合
 >   - `manual` — `scope-min-manual-hooks-v2.3.patch` による手動フック
+> - `kernelsu_xx_kpatch_compat` — `branch link hijacking` 使用時、KernelSU-XX に KernelPatch 互換修正（execve フォールバックおよび syscall table ミラーのスキップ）を適用
 
 > [!TIP]
 > **マトリクスビルドの仕組み:** マトリクスは常にバリアントごとに **1 つの成果物** のみを生成します。有効化した機能（Droidspaces / SUSFS）は、その単一の成果物に適用されます。5 つのバリアントすべてを選択した場合、カーネルバージョンの **各サブレベルごとに 5 つのビルド** が実行されます。`kernel_version` で `all` を選択すると、6.1 / 6.6 / 6.12 の全サブレベルが並列コンパイルされ、デフォルト設定では合計 **45 のジョブ** が同時に実行されます。
@@ -90,8 +91,8 @@
 | `Inline` | `#ifdef CONFIG_KSU_SUSFS` ブロックをカーネルサブシステムのソースに直接埋め込む、コンパイル時注入方式です。`static_key` 分岐により実行時の切り替えが可能です。kprobe や LSM フックには依存しません。VFS（`exec`、`open`、`stat`、`readdir`、`statfs`）、SELinux（`avc`、`hooks`、`services`）、input、mounts、procfs に組み込まれます。 |
 | `De-inlined` | `#ifdef CONFIG_KSU_SUSFS` によるインラインブロックを使用せず、カーネルソースへのパッチ適用により SUSFS フックを組み込みます。SUSFS ロジックがコアカーネルサブシステムからより明確に分離されます。 |
 | `Manual` | カーネルソースへの静的なパッチ適用方式です。コンパイル時に独自のフックをコアカーネルサブシステムへ注入します。 |
-| `Branch Link Hijacking` | カーネル text セクションをスキャンし、呼び出し元の分岐命令（`b`/`bl`）を直接フックへ書き換えることで、トランポリンオーバーヘッドを回避し Clang CFI に適合します。`CONFIG_KSU_HACK_ARM64_BRANCH_LINK` で有効化。 |
-| `Syscall Table Tampering` | `sys_call_table` 内の関数ポインタ（`sys_reboot`、`sys_execve` 等）を直接差し替える高性能フック方式。間接分岐（`blr`）オーバーヘッドを回避し、Clang CFI に適合します。`CONFIG_KSU_TAMPER_SYSCALL_TABLE` で有効化。 |
+| `Branch Link Hijacking` | カーネル text セクションをスキャンし、呼び出し元の分岐命令（`b`/`bl`）を直接フックへ書き換えることで、トランポリンオーバーヘッドを回避し ARM64 Clang CFI に適合します。`CONFIG_KSU_HACK_ARM64_BRANCH_LINK` で有効化。 |
+| `Syscall Table Tampering` | sucompat（`sys_execve` など）と `sys_reboot` 向けに `sys_call_table` 内の関数ポインタを直接差し替える高性能フック方式。間接分岐（`blr`）オーバーヘッドを回避し、Clang CFI に適合します。`CONFIG_KSU_TAMPER_SYSCALL_TABLE` で有効化。 |
 
 ---
 
@@ -103,14 +104,22 @@
 | **ソースミラー** | カーネルソースおよびツールチェーンの取得先として、Google 公式の AOSP ミラー、またはセルフホストミラーを選択可能です。 |
 | **SUSFS モジュール** | SUSFS 有効時に、最新の [susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module) を自動取得し、リリースノートにダウンロードリンクを記載します。全バリアントの SUSFS バージョンは単一の `susfs_commit` 入力で一元管理されます。 |
 | **KSU ツールキット** | 最新の [ksu_toolkit](https://github.com/backslashxx/ksu_toolkit) モジュールを nightly.link から自動取得し、リリースノートにダウンロードリンクを記載します。 |
-| **Droidspaces** | [Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS) を利用したコンテナ対応。SYSVIPC、IPC_NS、PID_NS、DEVTMPFS、NTSync、ネットワーク機能を提供します。`use_droidspaces` トグルでバリアントごとに有効化できます。 |
+| **Droidspaces** | [Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS) を利用したコンテナ対応。SYSVIPC、IPC_NS、PID_NS、DEVTMPFS、NTSync、ネットワーク機能を提供します。バリアントごとに `use_droidspaces` スイッチで制御します。 |
 | **Re:Kernel(-X)** | [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) および [Re:Kernel-X](https://github.com/myflavor/ReKernel-X) モジュールをカーネルに直接組み込みます。tombstone によるフリーズ復旧、ネットワークトリガーによる解除、binder 非同期クリーンアップを提供します。`use_rekernel` スイッチで制御します。 |
 | **VPNHide Next** | In-tree kpatch（`CONFIG_VPNHIDE=y`）を介して [VPNHide Next](https://github.com/soranerai/vpnhide_next_backend) を統合し、動的 LKM に依存することなくカーネルレベルで VPN ネットワークインターフェース、ルーティングルール、ソケット記述子を隠蔽します。付属の `vpnhide-bridge.zip` モジュールおよびマネージャー APK（`vpnhide.apk`）の上流ダウンロードリンクをリリースノートに記載します。`use_vpnhide` スイッチで制御します。 |
+| **NoMount** | [NoMount](https://github.com/maxsteeel/nomount) をカーネルに直接組み込みます（`CONFIG_NOMOUNT=y`）。マウントを作成せず `/proc/mounts` を汚すことなくモジュールファイルの注入・隠蔽を行う VFS パスリダイレクトフレームワークです。付属の `NoMount-*.zip` メタモジュールの上流ダウンロードリンクをリリースノートに記載します。`use_nomount` スイッチで制御します。 |
+| **fgetpriority** | [fgetpriority](https://github.com/aerath-stuff/fgetpriority) をカーネルに直接組み込みます（`CONFIG_FGETPRIORITY=y`）。アプリが `getpriority` / `setpriority` / `ioprio_get` / `ioprio_set` を用いて他アプリの UID を探知する結果を隠蔽し、モジュールのインストールは不要です。`use_fgetpriority` スイッチで制御します。 |
 | **Unicode バイパス修正** | 常に有効です。非標準の Unicode エンコーディングを用いたファイルシステムバイパス攻撃を防ぐため、カーネルの Unicode 正規化処理にパッチを適用します。 |
+| **CVE 修正** | 常に有効です。カーネルソース内の CVE-2026-43499（rtmutex）および CVE-2026-64560（sighand / POSIX CPU timers）を検出し、未修正の場合は修正を適用します。各サブレベルの結果はリリースノートに表示されます。 |
+| **ネットワークとファイルシステム** | 常に有効です。TCP BBR、IPSET、拡張 NAT（IPv6 NAT および REDIRECT）、TMPFS xattr / POSIX ACL。 |
 | **ADIOS I/O スケジューラ** | オプションで [ADIOS](https://github.com/firelzrd/adios) を kernel 6.6 および 6.12 ビルドの組み込みデフォルト・マルチキュー I/O スケジューラとして統合します。`use_adios` トグルで有効化し、kernel 6.1 は変更されません。 |
-| **LZ4/ZSTD ZRAM バックエンド** | オプションでカーネルの LZ4 と ZSTD 実装を公式 LZ4 1.10.0 および Zstandard 1.5.7 に更新し、kernel 6.12 (6.12.23でのみテスト済み) の ZRAM バックエンドを有効化します。`use_lz4_zstd` トグルで制御し、6.1 および 6.6 ビルドは変更されません。 |
+| **LZ4/ZSTD ZRAM バックエンド** | オプションでカーネルの LZ4 と ZSTD 実装を公式 LZ4 1.10.0 および Zstandard 1.5.7 に更新し、カーネル 6.12（6.12.23 でのみテスト済み）の ZRAM バックエンドを有効化します。`use_lz4_zstd` スイッチで制御し、6.1 および 6.6 ビルドは変更されません。 |
 | **Ccache** | 依存関係のインストール完了後に 60 秒間の待機プロセスを設けることでコンパイラキャッシュを安全に統合。ワークフロー実行をまたいだ、安定かつ堅牢な増分ビルドの高速化を実現します。 |
 | **ビルドメタデータのカスタマイズ** | コンパイル済みイメージに埋め込む `カーネル名`、`ビルド日時`、`ユーザー名`、`ホスト名` を任意に設定できます。 |
+| **追加機能と修正** | [midori01/KernelSU](https://github.com/midori01/KernelSU) の各ブランチ先頭に載せた追加機能・修正コミットを対応するバリアントに適用します。`use_extra_features` スイッチで制御します。 |
+| **KSU デバッグ** | `CONFIG_KSU_DEBUG=y` でビルドし、eBPF デバッグ用に zstd 圧縮した `vmlinux` をアーティファクトとしてアップロードします。`ksu_debug` スイッチで制御します。 |
+| **上流同期** | ビルド前に `kernel_versions.json` のカーネルバージョンとソースを更新し、上流から SUSFS パッチを再生成します。`sync_upstream` スイッチで制御します。 |
+| **リリース種別** | `release` は正式リリースを公開し、カーネルバージョンごとに最新 2 件を保持します。`pre-release` はプレリリースを公開し、`no-release` はビルド成果物のアップロードのみ行います。 |
 
 ---
 
