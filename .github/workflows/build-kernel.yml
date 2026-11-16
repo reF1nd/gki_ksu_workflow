@@ -280,7 +280,7 @@ jobs:
       - name: Apply CVE Fixes
         working-directory: kernel_workspace/common
         run: |
-          for cve in 43499 64560; do
+          for cve in 43499 64560 98260; do
             if bash "${{ github.workspace }}/.github/scripts/check_cve.sh" $cve > /dev/null 2>&1; then
               echo "CVE-2026-$cve fix already present."
               echo "CVE_${cve}_FIXED=true" >> $GITHUB_ENV
@@ -392,13 +392,12 @@ jobs:
         run: |
           for name in kernelsu-xx-bl-execve-fallback kernelsu-xx-mirror-skip-foreign; do
             FIX="${{ github.workspace }}/.github/patches/$name.patch"
-            if patch -p1 -d KernelSU --forward --dry-run < "$FIX" > /dev/null 2>&1; then
-              patch -p1 -d KernelSU --forward < "$FIX"
-            elif patch -p1 -d KernelSU --reverse --dry-run < "$FIX" > /dev/null 2>&1; then
+            if patch --batch -p1 -d KernelSU --forward --dry-run < "$FIX" > /dev/null 2>&1; then
+              patch --batch -p1 -d KernelSU --forward < "$FIX"
+            elif patch --batch -p1 -d KernelSU --reverse --dry-run < "$FIX" > /dev/null 2>&1; then
               echo "$name already present in KernelSU-XX, skipping."
             else
               echo "::error::$name no longer applies to KernelSU-XX; without it KernelPatch can break preinit, lose syscall hooks or crash execve. Update .github/patches/$name.patch."
-              patch -p1 -d KernelSU --forward --dry-run < "$FIX" || true
               exit 1
             fi
           done
@@ -550,6 +549,7 @@ jobs:
           mkdir -p "$COMMIT_DIR"
           echo "${CVE_43499_FIXED:-false}" > "$COMMIT_DIR/cve_43499_fixed_${{ inputs.kernel_version }}.${{ inputs.sub_level }}"
           echo "${CVE_64560_FIXED:-false}" > "$COMMIT_DIR/cve_64560_fixed_${{ inputs.kernel_version }}.${{ inputs.sub_level }}"
+          echo "${CVE_98260_FIXED:-false}" > "$COMMIT_DIR/cve_98260_fixed_${{ inputs.kernel_version }}.${{ inputs.sub_level }}"
           cd KernelSU
           save_ksu_commit() {
             git rev-parse HEAD > "$COMMIT_DIR/${1}_ksu_commit"
@@ -732,5 +732,5 @@ jobs:
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Kernel-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-${{ inputs.variant }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}${{ env.NM_SUFFIX }}${{ steps.cfg.outputs.r_suffix }}
           path: kernel_workspace/${{ env.ZIP_NAME }}
+          archive: false
