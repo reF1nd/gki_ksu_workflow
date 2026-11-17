@@ -398,6 +398,7 @@ jobs:
               echo "$name already present in KernelSU-XX, skipping."
             else
               echo "::error::$name no longer applies to KernelSU-XX; without it KernelPatch can break preinit, lose syscall hooks or crash execve. Update .github/patches/$name.patch."
+              patch --batch -p1 -d KernelSU --forward --dry-run < "$FIX" || true
               exit 1
             fi
           done
