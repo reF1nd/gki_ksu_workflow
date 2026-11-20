@@ -226,14 +226,14 @@ index ec36d2e..45324da 100644
  obj-$(CONFIG_TCP_CONG_CDG) += tcp_cdg.o
  obj-$(CONFIG_TCP_CONG_CUBIC) += tcp_cubic.o
 diff --git a/net/ipv4/inet_diag.c b/net/ipv4/inet_diag.c
-index 6763930..429b863 100644
+index 6763930..e4c19b8 100644
 --- a/net/ipv4/inet_diag.c
 +++ b/net/ipv4/inet_diag.c
 @@ -17,6 +17,7 @@
  
  #include <net/icmp.h>
  #include <net/tcp.h>
-+#include "tcp_bbr3.h"
++#include "tcp_bbr3_diag.h"
  #include <net/ipv6.h>
  #include <net/inet_common.h>
  #include <net/inet_connection_sock.h>
@@ -266,12 +266,12 @@ index 6763930..429b863 100644
  			goto errout;
  	}
 diff --git a/net/ipv4/tcp.c b/net/ipv4/tcp.c
-index 9792e82..852c187 100644
+index 9792e82..27b5394 100644
 --- a/net/ipv4/tcp.c
 +++ b/net/ipv4/tcp.c
 @@ -273,2 +273,3 @@
  #include <net/tcp.h>
-+#include "tcp_bbr3.h"
++#include "tcp_bbr3_diag.h"
  #include <net/mptcp.h>
 @@ -4076,2 +4077,19 @@ static void tcp_get_info_chrono_stats(const struct tcp_sock *tp,
  /* Return information about state of tcp endpoint in API format. */
@@ -318,7 +318,7 @@ index 9792e82..852c187 100644
  			return -EFAULT;
 diff --git a/net/ipv4/tcp_bbr3.c b/net/ipv4/tcp_bbr3.c
 new file mode 100644
-index 0000000..66c1319
+index 0000000..533e5da
 --- /dev/null
 +++ b/net/ipv4/tcp_bbr3.c
 @@ -0,0 +1,2452 @@
@@ -384,7 +384,7 @@ index 0000000..66c1319
 +
 +#include <linux/module.h>
 +#include <net/tcp.h>
-+#include "tcp_bbr3.h"
++#include "tcp_bbr3_diag.h"
 +#include <linux/inet_diag.h>
 +#include <linux/inet.h>
 +#include <linux/random.h>
@@ -2776,15 +2776,14 @@ index 0000000..66c1319
 +MODULE_VERSION(__stringify(BBR_VERSION));
 diff --git a/net/ipv4/tcp_bbr3.h b/net/ipv4/tcp_bbr3.h
 new file mode 100644
-index 0000000..94afa06
+index 0000000..ba51288
 --- /dev/null
 +++ b/net/ipv4/tcp_bbr3.h
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,32 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +#ifndef _TCP_BBR3_H
 +#define _TCP_BBR3_H
 +
-+#include <linux/inet_diag.h>
 +#include <net/tcp.h>
 +
 +/* Per-ACK inputs are kept separate from the GKI rate_sample callback ABI. */
@@ -2810,6 +2809,21 @@ index 0000000..94afa06
 +
 +void tcp_bbr3_skb_marked_lost(struct sock *sk, const struct sk_buff *skb);
 +void tcp_bbr3_tlp_recovery(struct sock *sk);
++
++
++#endif
+diff --git a/net/ipv4/tcp_bbr3_diag.h b/net/ipv4/tcp_bbr3_diag.h
+new file mode 100644
+index 0000000..6a37ed4
+--- /dev/null
++++ b/net/ipv4/tcp_bbr3_diag.h
+@@ -0,0 +1,19 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef _TCP_BBR3_DIAG_H
++#define _TCP_BBR3_DIAG_H
++
++#include <linux/inet_diag.h>
++#include "tcp_bbr3.h"
 +
 +union tcp_cc_info_buffer {
 +	union tcp_cc_info legacy;
@@ -2977,18 +2991,10 @@ index 65b3586..e6b85a7 100644
  	    tcp_in_quickack_mode(sk) ||
  	    /* Protocol state mandates a one-time immediate ACK */
 diff --git a/net/ipv4/tcp_minisocks.c b/net/ipv4/tcp_minisocks.c
-index f3e4fc9..114d913 100644
+index f3e4fc9..b169e03 100644
 --- a/net/ipv4/tcp_minisocks.c
 +++ b/net/ipv4/tcp_minisocks.c
-@@ -20,6 +20,7 @@
-  */
- 
- #include <net/tcp.h>
-+#include "tcp_bbr3.h"
- #include <net/xfrm.h>
- #include <net/busy_poll.h>
- #include <net/rstreason.h>
-@@ -462,6 +463,9 @@ void tcp_ca_openreq_child(struct sock *sk, const struct dst_entry *dst)
+@@ -462,6 +462,9 @@ void tcp_ca_openreq_child(struct sock *sk, const struct dst_entry *dst)
  	u32 ca_key = dst_metric(dst, RTAX_CC_ALGO);
  	bool ca_got_dst = false;
  
