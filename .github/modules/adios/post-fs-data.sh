@@ -16,11 +16,18 @@ if [ -f "$ADIOS_SAFE" ]; then
 	exit 0
 fi
 
-if ! adios_registered || [ -n "$(read_pref)" ]; then
-	echo "$id" > "$ADIOS_BOOTING"
+need_lkm=0
+adios_registered || need_lkm=1
+
+if [ "$need_lkm" = 1 ] || [ -n "$(read_pref)" ]; then
+	if ! { echo "$id" > "$ADIOS_BOOTING" && sync; }; then
+		klog "cannot write boot marker, skipping"
+		update_desc
+		exit 0
+	fi
 fi
 
-if ! adios_registered && ! load_adios; then
+if [ "$need_lkm" = 1 ] && ! load_adios; then
 	klog "no usable ADIOS LKM for $(uname -r)"
 fi
 

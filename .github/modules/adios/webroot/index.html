@@ -149,11 +149,13 @@ const I18N = {
     failed: "Failed",
     noKsu: "KernelSU WebUI API not available",
     lkmOnly: "Loads the bundled LKM",
+    vendorSched: "Provided by the ROM or vendor kernel modules",
     sched: {
       "none": "No scheduling, requests go straight to the device; suits fast NVMe",
-      "mq-deadline": "Guarantees request deadlines; general purpose and stable",
+      "mq-deadline": "Serves requests by deadline; general purpose and stable",
       "kyber": "Limits queue depth to meet target latencies",
       "bfq": "Fair bandwidth per process, favors interactivity; higher overhead",
+      "cpq": "Xiaomi SmartFocusIO: deadline scheduling with cgroup priority levels that favor foreground I/O",
       "adios": "Adaptive deadline scheduling that learns device latency"
     }
   },
@@ -177,11 +179,13 @@ const I18N = {
     failed: "失败",
     noKsu: "KernelSU WebUI 接口不可用",
     lkmOnly: "将加载模块自带的 LKM",
+    vendorSched: "由 ROM 或厂商内核模块提供",
     sched: {
       "none": "不调度，请求直接下发到设备，适合高速 NVMe",
-      "mq-deadline": "保证请求的截止时间，通用、稳定",
+      "mq-deadline": "按截止时间调度请求，通用、稳定",
       "kyber": "按目标延迟限制队列深度",
       "bfq": "按进程公平分配带宽，偏重交互，开销较大",
+      "cpq": "小米 SmartFocusIO：截止期调度，按 cgroup 优先级分级，优先前台 I/O",
       "adios": "自适应截止期调度，会学习设备延迟"
     }
   },
@@ -205,18 +209,21 @@ const I18N = {
     failed: "失敗しました",
     noKsu: "KernelSU WebUI API が利用できません",
     lkmOnly: "同梱の LKM を読み込みます",
+    vendorSched: "ROM またはベンダーのカーネルモジュールが提供します",
     sched: {
       "none": "スケジューリングせず、要求をそのままデバイスへ渡します。高速な NVMe 向け",
-      "mq-deadline": "要求の期限を保証します。汎用的で安定",
+      "mq-deadline": "要求を期限に基づいて処理します。汎用的で安定",
       "kyber": "目標レイテンシに合わせてキューの深さを制限します",
       "bfq": "プロセスごとに帯域を公平に配分し、操作性を重視します。負荷はやや高め",
+      "cpq": "Xiaomi SmartFocusIO：cgroup の優先度レベルでフォアグラウンドの I/O を優先するデッドラインスケジューリング",
       "adios": "デバイスのレイテンシを学習する適応型のデッドラインスケジューリング"
     }
   }
 };
 const lang = (navigator.language || "en").toLowerCase();
-const T = I18N[lang.startsWith("zh") ? "zh" : lang.startsWith("ja") ? "ja" : "en"];
-document.documentElement.lang = lang;
+const langKey = lang.startsWith("zh") ? "zh" : lang.startsWith("ja") ? "ja" : "en";
+const T = I18N[langKey];
+document.documentElement.lang = langKey;
 document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = T[el.dataset.i18n]; });
 
 let seq = 0;
@@ -265,12 +272,12 @@ function render(s) {
   document.getElementById("kmi").textContent = s.kmi;
   document.getElementById("safe").classList.toggle("show", s.safe);
 
-  const scheds = [...s.schedulers];
+  const scheds = s.schedulers.filter(n => /^[a-z0-9_-]+$/.test(n));
   if (!scheds.includes("adios") && s.mode === "missing" && s.lkm.length) scheds.push("adios");
   const inUse = new Set(s.devices.map(d => d.current));
   const list = document.getElementById("options");
   list.replaceChildren();
-  [["", T.system, T.systemDesc], ...scheds.map(n => [n, n, [T.sched[n], n === "adios" && s.mode === "missing" ? T.lkmOnly : ""].filter(Boolean).join(" · ")])].forEach(([value, name, desc]) => {
+  [["", T.system, T.systemDesc], ...scheds.map(n => [n, n, [T.sched[n] || T.vendorSched, n === "adios" && s.mode === "missing" ? T.lkmOnly : ""].filter(Boolean).join(" · ")])].forEach(([value, name, desc]) => {
     const li = el("li", "opt" + ((s.pref || "") === value ? " sel" : ""));
     li.append(el("span", "radio"));
     const txt = el("div", "txt");
@@ -301,7 +308,7 @@ function render(s) {
 async function refresh() {
   const r = await exec(`sh ${MODDIR}/adiosctl status`);
   if (r.errno !== 0) {
-    toast(r.stderr || T.failed);
+    toast((r.stderr || "").trim() || T.failed);
     return;
   }
   try {
@@ -312,12 +319,13 @@ async function refresh() {
 }
 
 async function choose(value, li) {
-  if (busy || !state || (state.pref || "") === value) return;
+  if (busy || !state) return;
   busy = true;
   li.classList.add("busy");
   const r = await exec(`sh ${MODDIR}/adiosctl set ${value || "default"}`);
   busy = false;
-  toast(r.errno === 0 ? `${T.applied}: ${value || T.system}` : (r.stderr.trim() || T.failed));
+  li.classList.remove("busy");
+  toast(r.errno === 0 ? `${T.applied}: ${value || T.system}` : ((r.stderr || "").trim() || T.failed));
   await refresh();
 }
 
@@ -326,7 +334,7 @@ document.getElementById("resume").addEventListener("click", async () => {
   busy = true;
   const r = await exec(`sh ${MODDIR}/adiosctl enable`);
   busy = false;
-  toast(r.errno === 0 ? T.applied : (r.stderr.trim() || T.failed));
+  toast(r.errno === 0 ? T.applied : ((r.stderr || "").trim() || T.failed));
   await refresh();
 });
 

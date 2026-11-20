@@ -146,15 +146,21 @@ read_pref() {
 snapshot_original() {
 	id=$(boot_id)
 	if [ -f "$ADIOS_ORIG" ] && [ "$(head -n 1 "$ADIOS_ORIG")" = "$id" ]; then
+		for d in $(block_devs); do
+			sed -n '2,$p' "$ADIOS_ORIG" | grep -q "^$d " && continue
+			s=$(dev_current "$d")
+			[ -n "$s" ] && echo "$d $s" >> "$ADIOS_ORIG"
+		done
 		return 0
 	fi
 	mkdir -p "$ADIOS_DATA"
+	tmp="$ADIOS_ORIG.$$"
 	{
 		echo "$id"
 		for d in $(block_devs); do
 			echo "$d $(dev_current "$d")"
 		done
-	} > "$ADIOS_ORIG.tmp" && mv "$ADIOS_ORIG.tmp" "$ADIOS_ORIG"
+	} > "$tmp" && mv "$tmp" "$ADIOS_ORIG"
 }
 
 orig_of() {
@@ -171,9 +177,14 @@ set_dev() {
 
 restore_original() {
 	[ -f "$ADIOS_ORIG" ] || return 0
-	sed -n '2,$p' "$ADIOS_ORIG" | while read -r d s; do
-		[ -n "$s" ] && [ -f "/sys/block/$d/queue/scheduler" ] && set_dev "$d" "$s"
-	done
+	sed -n '2,$p' "$ADIOS_ORIG" | awk '!seen[$1]++' | (
+		rc=0
+		while read -r d s; do
+			[ -n "$s" ] && [ -f "/sys/block/$d/queue/scheduler" ] || continue
+			set_dev "$d" "$s" || rc=1
+		done
+		exit $rc
+	)
 }
 
 apply_pref() {
@@ -181,12 +192,19 @@ apply_pref() {
 	p=$(read_pref)
 	if [ -z "$p" ]; then
 		restore_original
-		return 0
+		return
 	fi
 	rc=0
+	n=0
 	for d in $(block_devs); do
-		dev_has "$d" "$p" && { set_dev "$d" "$p" || rc=1; }
+		dev_has "$d" "$p" || continue
+		n=$((n + 1))
+		set_dev "$d" "$p" || rc=1
 	done
+	if [ "$n" -eq 0 ]; then
+		echo "scheduler not available: $p" >&2
+		rc=1
+	fi
 	return $rc
 }
 

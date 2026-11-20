@@ -89,6 +89,10 @@ jobs:
           ver="$MODULE_VERSION"
           [ -n "$ver" ] || ver=$(TZ='Asia/Tokyo' date +'%Y%m%d-%H%M')
           [[ "$ver" =~ ^[[:alnum:]][[:alnum:].+_-]*$ ]] || { echo 'Invalid module version' >&2; exit 1; }
+          for k in android15-6.6 android16-6.12; do
+            test -f "lkm/adios-$k.ko"
+            test -s "lkm/adios-$k.version"
+          done
           stage="$RUNNER_TEMP/adios_module"
           cp -r .github/modules/adios "$stage"
           mkdir -p "$stage/lkm"

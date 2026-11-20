@@ -11,5 +11,6 @@ until [ "$(getprop sys.boot_completed)" = 1 ]; do
 done
 sleep 30
 
+[ -f "$ADIOS_SAFE" ] || [ -z "$(read_pref)" ] || apply_pref
 rm -f "$ADIOS_BOOTING"
 update_desc

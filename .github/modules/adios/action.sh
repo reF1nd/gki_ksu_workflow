@@ -76,13 +76,15 @@ while :; do
 			echo
 			if sh "$MODDIR/adiosctl" set "$choice"; then
 				echo "Applied: $(label "$choice")"
+				rc=0
 			else
 				echo "Failed to apply: $(label "$choice")"
+				rc=1
 			fi
 			for d in $(block_devs); do
 				echo "  $d: $(dev_current "$d")"
 			done
-			exit 0
+			exit $rc
 			;;
 		*)
 			echo

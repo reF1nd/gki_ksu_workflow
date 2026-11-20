@@ -10,7 +10,6 @@ MODDIR=$MODPATH
 . "$MODPATH/common.sh"
 
 mkdir -p "$ADIOS_DATA"
-rm -f "$ADIOS_SAFE" "$ADIOS_BOOTING"
 
 ui_print "- Kernel: $(uname -r)"
 ui_print "- KMI: $(kmi_tag)"
@@ -32,6 +31,8 @@ case $(adios_mode) in
 		ui_print "- ADIOS LKM loaded"
 		;;
 esac
+
+rm -f "$ADIOS_SAFE" "$ADIOS_BOOTING"
 
 v=$(adios_version)
 [ -n "$v" ] && ui_print "- ADIOS version: $v"

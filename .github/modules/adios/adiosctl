@@ -92,6 +92,12 @@ cmd_set() {
 			echo "$1" > "$ADIOS_PREF"
 			;;
 	esac
+	if [ -f "$ADIOS_SAFE" ] && [ "$1" != adios ]; then
+		apply_pref
+		rc=$?
+		update_desc
+		return $rc
+	fi
 	cmd_enable
 }
 
