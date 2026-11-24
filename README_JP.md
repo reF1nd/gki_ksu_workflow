@@ -54,17 +54,17 @@
 | [KernelSU-Official-DS](https://github.com/tiann/KernelSU) | ❌ | ✅ | `Kprobes` |
 | [KernelSU-Official-SUSFS](https://github.com/tiann/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-Official-SUSFS-DS](https://github.com/tiann/KernelSU) | ✅ | ✅ | `De-inlined` |
-| [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ❌ | `Manual` |
-| [ReSukiSU-DS](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ✅ | `Manual` |
-| [ReSukiSU-SUSFS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ❌ | `De-inlined` |
-| [ReSukiSU-SUSFS-DS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ✅ | `De-inlined` |
+| [BakaSU](https://github.com/Baka-SU/BakaSU) | ❌ | ❌ | `Manual` |
+| [BakaSU-DS](https://github.com/Baka-SU/BakaSU) | ❌ | ✅ | `Manual` |
+| [BakaSU-SUSFS](https://github.com/Baka-SU/BakaSU) | ✅ | ❌ | `De-inlined` |
+| [BakaSU-SUSFS-DS](https://github.com/Baka-SU/BakaSU) | ✅ | ✅ | `De-inlined` |
 | [KernelSU-XX](https://github.com/backslashxx/KernelSU) | ❌ | ❌ | `Branch Link` |
 | [KernelSU-XX-DS](https://github.com/backslashxx/KernelSU) | ❌ | ✅ | `Branch Link` |
 | [KernelSU-XX-SUSFS](https://github.com/backslashxx/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-XX-SUSFS-DS](https://github.com/backslashxx/KernelSU) | ✅ | ✅ | `De-inlined` |
 
-> \* **ReSukiSU および KernelSU-XX のフック方式:** `resukisu_hook_mode` および `kernelsu_xx_hook_mode` で個別に設定可能です。
-> - `resukisu_hook_mode` — `manual`（デフォルト）/ `tracepoint`
+> \* **BakaSU および KernelSU-XX のフック方式:** `bakasu_hook_mode` および `kernelsu_xx_hook_mode` で個別に設定可能です。
+> - `bakasu_hook_mode` — `manual`（デフォルト）/ `tracepoint`
 > - `kernelsu_xx_hook_mode`:
 >   - `branch link hijacking` — KernelSU-XX のデフォルト；`CONFIG_KSU_HACK_ARM64_BRANCH_LINK` を使用してカーネル text 内の分岐命令（`b`/`bl`）を直接フックへリダイレクトし、トランポリンオーバーヘッドを回避しつつ ARM64 CFI に適合
 >   - `syscall table tampering` — `CONFIG_KSU_TAMPER_SYSCALL_TABLE` を使用して `sys_call_table` の関数ポインタを直接改ざんし、間接分岐（`blr`）オーバーヘッドを回避しつつ Clang CFI に適合
@@ -78,7 +78,7 @@
 
 ## 📱 マネージャー
 
-選択したアップストリームが提供するマネージャーを使用してください：[KowSU](https://github.com/KOWX712/KernelSU)、[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)、[KernelSU Official](https://github.com/tiann/KernelSU)、[ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)、または [KernelSU-XX](https://github.com/backslashxx/KernelSU)。ワークフローは各アップストリーム本来のマネージャー検証を維持し、共通マネージャー APK は同梱しません。
+選択したアップストリームが提供するマネージャーを使用してください：[KowSU](https://github.com/KOWX712/KernelSU)、[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)、[KernelSU Official](https://github.com/tiann/KernelSU)、[BakaSU](https://github.com/Baka-SU/BakaSU)、または [KernelSU-XX](https://github.com/backslashxx/KernelSU)。ワークフローは各アップストリーム本来のマネージャー検証を維持し、共通マネージャー APK は同梱しません。
 
 ---
 

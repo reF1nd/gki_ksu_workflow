@@ -16,10 +16,10 @@ inputs:
     required: false
     default: '0'
   variant:
-    description: 'KSU variant (KowSU, KernelSU-Next, ReSukiSU, etc.)'
+    description: 'KSU variant (KowSU, KernelSU-Next, BakaSU, etc.)'
     required: true
-  resukisu_hook_mode:
-    description: 'ReSukiSU hook mode (manual, tracepoint)'
+  bakasu_hook_mode:
+    description: 'BakaSU hook mode (manual, tracepoint)'
     required: false
     default: 'manual'
   kernelsu_xx_hook_mode:
@@ -149,8 +149,8 @@ runs:
                 ;;
             esac
             ;;
-          ReSukiSU)
-            if [ "${{ inputs.resukisu_hook_mode }}" = "tracepoint" ]; then
+          BakaSU)
+            if [ "${{ inputs.bakasu_hook_mode }}" = "tracepoint" ]; then
               cat >> $DEFCONFIG <<-'EOF'
         CONFIG_KSU_TOOLKIT_SUPPORT=y
         CONFIG_KSU_TRACEPOINT_HOOK=y

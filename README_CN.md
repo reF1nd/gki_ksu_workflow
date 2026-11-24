@@ -54,17 +54,17 @@
 | [KernelSU-Official-DS](https://github.com/tiann/KernelSU) | ❌ | ✅ | `Kprobes` |
 | [KernelSU-Official-SUSFS](https://github.com/tiann/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-Official-SUSFS-DS](https://github.com/tiann/KernelSU) | ✅ | ✅ | `De-inlined` |
-| [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ❌ | `Manual` |
-| [ReSukiSU-DS](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ✅ | `Manual` |
-| [ReSukiSU-SUSFS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ❌ | `De-inlined` |
-| [ReSukiSU-SUSFS-DS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ✅ | `De-inlined` |
+| [BakaSU](https://github.com/Baka-SU/BakaSU) | ❌ | ❌ | `Manual` |
+| [BakaSU-DS](https://github.com/Baka-SU/BakaSU) | ❌ | ✅ | `Manual` |
+| [BakaSU-SUSFS](https://github.com/Baka-SU/BakaSU) | ✅ | ❌ | `De-inlined` |
+| [BakaSU-SUSFS-DS](https://github.com/Baka-SU/BakaSU) | ✅ | ✅ | `De-inlined` |
 | [KernelSU-XX](https://github.com/backslashxx/KernelSU) | ❌ | ❌ | `Branch Link` |
 | [KernelSU-XX-DS](https://github.com/backslashxx/KernelSU) | ❌ | ✅ | `Branch Link` |
 | [KernelSU-XX-SUSFS](https://github.com/backslashxx/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-XX-SUSFS-DS](https://github.com/backslashxx/KernelSU) | ✅ | ✅ | `De-inlined` |
 
-> \* **ReSukiSU 和 KernelSU-XX 的 Hook 类型：** 可分别通过 `resukisu_hook_mode` 与 `kernelsu_xx_hook_mode` 运行时配置。
-> - `resukisu_hook_mode` — `manual`（默认）/ `tracepoint`
+> \* **BakaSU 和 KernelSU-XX 的 Hook 类型：** 可分别通过 `bakasu_hook_mode` 与 `kernelsu_xx_hook_mode` 运行时配置。
+> - `bakasu_hook_mode` — `manual`（默认）/ `tracepoint`
 > - `kernelsu_xx_hook_mode`：
 >   - `branch link hijacking` — KernelSU-XX 的默认值；通过 `CONFIG_KSU_HACK_ARM64_BRANCH_LINK` 扫描内核 text 段并直接覆写调用处跳转指令（`b`/`bl`）重定向到 Hook，无 trampoline 开销且兼容 ARM64 CFI
 >   - `syscall table tampering` — 通过 `CONFIG_KSU_TAMPER_SYSCALL_TABLE` 直接修改 `sys_call_table` 系统调用表指针，避免间接跳转（`blr`）开销并兼容 Clang CFI
@@ -78,7 +78,7 @@
 
 ## 📱 管理器
 
-请使用所选上游提供的管理器：[KowSU](https://github.com/KOWX712/KernelSU)、[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)、[KernelSU Official](https://github.com/tiann/KernelSU)、[ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) 或 [KernelSU-XX](https://github.com/backslashxx/KernelSU)。工作流保留各上游原有的管理器验证逻辑，不再打包通用管理器 APK。
+请使用所选上游提供的管理器：[KowSU](https://github.com/KOWX712/KernelSU)、[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)、[KernelSU Official](https://github.com/tiann/KernelSU)、[BakaSU](https://github.com/Baka-SU/BakaSU) 或 [KernelSU-XX](https://github.com/backslashxx/KernelSU)。工作流保留各上游原有的管理器验证逻辑，不再打包通用管理器 APK。
 
 ---
 

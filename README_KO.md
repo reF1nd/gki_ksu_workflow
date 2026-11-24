@@ -54,17 +54,17 @@
 | [KernelSU-Official-DS](https://github.com/tiann/KernelSU) | ❌ | ✅ | `Kprobes` |
 | [KernelSU-Official-SUSFS](https://github.com/tiann/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-Official-SUSFS-DS](https://github.com/tiann/KernelSU) | ✅ | ✅ | `De-inlined` |
-| [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ❌ | `Manual` |
-| [ReSukiSU-DS](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ✅ | `Manual` |
-| [ReSukiSU-SUSFS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ❌ | `De-inlined` |
-| [ReSukiSU-SUSFS-DS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ✅ | `De-inlined` |
+| [BakaSU](https://github.com/Baka-SU/BakaSU) | ❌ | ❌ | `Manual` |
+| [BakaSU-DS](https://github.com/Baka-SU/BakaSU) | ❌ | ✅ | `Manual` |
+| [BakaSU-SUSFS](https://github.com/Baka-SU/BakaSU) | ✅ | ❌ | `De-inlined` |
+| [BakaSU-SUSFS-DS](https://github.com/Baka-SU/BakaSU) | ✅ | ✅ | `De-inlined` |
 | [KernelSU-XX](https://github.com/backslashxx/KernelSU) | ❌ | ❌ | `Branch Link` |
 | [KernelSU-XX-DS](https://github.com/backslashxx/KernelSU) | ❌ | ✅ | `Branch Link` |
 | [KernelSU-XX-SUSFS](https://github.com/backslashxx/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-XX-SUSFS-DS](https://github.com/backslashxx/KernelSU) | ✅ | ✅ | `De-inlined` |
 
-> \* **ReSukiSU 및 KernelSU-XX 후크 방식:** `resukisu_hook_mode` 및 `kernelsu_xx_hook_mode` 옵션을 통해 각각 설정할 수 있습니다.
-> - `resukisu_hook_mode` — `manual` (기본값) / `tracepoint`
+> \* **BakaSU 및 KernelSU-XX 후크 방식:** `bakasu_hook_mode` 및 `kernelsu_xx_hook_mode` 옵션을 통해 각각 설정할 수 있습니다.
+> - `bakasu_hook_mode` — `manual` (기본값) / `tracepoint`
 > - `kernelsu_xx_hook_mode`:
 >   - `branch link hijacking` — KernelSU-XX의 기본값; `CONFIG_KSU_HACK_ARM64_BRANCH_LINK`를 사용하여 커널 text의 분기 명령(`b`/`bl`)을 후크로 직접 리다이렉션하여 트램펄린 오버헤드를 방지하고 ARM64 CFI를 준수
 >   - `syscall table tampering` — `CONFIG_KSU_TAMPER_SYSCALL_TABLE`를 사용하여 `sys_call_table` 항목을 직접 변조하여 간접 분기(`blr`) 오버헤드를 방지하고 Clang CFI를 준수
@@ -78,7 +78,7 @@
 
 ## 📱 매니저
 
-선택한 업스트림에서 제공하는 매니저를 사용하세요: [KowSU](https://github.com/KOWX712/KernelSU), [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next), [KernelSU Official](https://github.com/tiann/KernelSU), [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU), 또는 [KernelSU-XX](https://github.com/backslashxx/KernelSU). 워크플로는 각 업스트림의 기존 매니저 검증을 유지하며 공용 매니저 APK를 포함하지 않습니다.
+선택한 업스트림에서 제공하는 매니저를 사용하세요: [KowSU](https://github.com/KOWX712/KernelSU), [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next), [KernelSU Official](https://github.com/tiann/KernelSU), [BakaSU](https://github.com/Baka-SU/BakaSU), 또는 [KernelSU-XX](https://github.com/backslashxx/KernelSU). 워크플로는 각 업스트림의 기존 매니저 검증을 유지하며 공용 매니저 APK를 포함하지 않습니다.
 
 ---
 

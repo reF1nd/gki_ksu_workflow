@@ -54,17 +54,17 @@ All kernel version-specific settings are centralized in [`.github/config/kernel_
 | [KernelSU-Official-DS](https://github.com/tiann/KernelSU) | ❌ | ✅ | `Kprobes` |
 | [KernelSU-Official-SUSFS](https://github.com/tiann/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-Official-SUSFS-DS](https://github.com/tiann/KernelSU) | ✅ | ✅ | `De-inlined` |
-| [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ❌ | `Manual` |
-| [ReSukiSU-DS](https://github.com/ReSukiSU/ReSukiSU) | ❌ | ✅ | `Manual` |
-| [ReSukiSU-SUSFS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ❌ | `De-inlined` |
-| [ReSukiSU-SUSFS-DS](https://github.com/ReSukiSU/ReSukiSU) | ✅ | ✅ | `De-inlined` |
+| [BakaSU](https://github.com/Baka-SU/BakaSU) | ❌ | ❌ | `Manual` |
+| [BakaSU-DS](https://github.com/Baka-SU/BakaSU) | ❌ | ✅ | `Manual` |
+| [BakaSU-SUSFS](https://github.com/Baka-SU/BakaSU) | ✅ | ❌ | `De-inlined` |
+| [BakaSU-SUSFS-DS](https://github.com/Baka-SU/BakaSU) | ✅ | ✅ | `De-inlined` |
 | [KernelSU-XX](https://github.com/backslashxx/KernelSU) | ❌ | ❌ | `Branch Link` |
 | [KernelSU-XX-DS](https://github.com/backslashxx/KernelSU) | ❌ | ✅ | `Branch Link` |
 | [KernelSU-XX-SUSFS](https://github.com/backslashxx/KernelSU) | ✅ | ❌ | `De-inlined` |
 | [KernelSU-XX-SUSFS-DS](https://github.com/backslashxx/KernelSU) | ✅ | ✅ | `De-inlined` |
 
-> \* **ReSukiSU & KernelSU-XX Hook Type:** Runtime-configurable via `resukisu_hook_mode` and `kernelsu_xx_hook_mode`.
-> - `resukisu_hook_mode` — `manual` (default) / `tracepoint`
+> \* **BakaSU & KernelSU-XX Hook Type:** Runtime-configurable via `bakasu_hook_mode` and `kernelsu_xx_hook_mode`.
+> - `bakasu_hook_mode` — `manual` (default) / `tracepoint`
 > - `kernelsu_xx_hook_mode`:
 >   - `branch link hijacking` — default for KernelSU-XX; uses `CONFIG_KSU_HACK_ARM64_BRANCH_LINK` to scan kernel text and overwrite call-site branch instructions (`b`/`bl`) directly to hooks, bypassing trampoline overhead and complying with ARM64 CFI
 >   - `syscall table tampering` — uses `CONFIG_KSU_TAMPER_SYSCALL_TABLE` to directly tamper with `sys_call_table` entries, avoiding indirect branch (`blr`) overhead while complying with Clang CFI
@@ -78,7 +78,7 @@ All kernel version-specific settings are centralized in [`.github/config/kernel_
 
 ## 📱 Managers
 
-Use the manager distributed by the selected upstream: [KowSU](https://github.com/KOWX712/KernelSU), [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next), [KernelSU Official](https://github.com/tiann/KernelSU), [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU), or [KernelSU-XX](https://github.com/backslashxx/KernelSU). The workflow preserves each upstream's manager verification and does not bundle a universal manager APK.
+Use the manager distributed by the selected upstream: [KowSU](https://github.com/KOWX712/KernelSU), [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next), [KernelSU Official](https://github.com/tiann/KernelSU), [BakaSU](https://github.com/Baka-SU/BakaSU), or [KernelSU-XX](https://github.com/backslashxx/KernelSU). The workflow preserves each upstream's manager verification and does not bundle a universal manager APK.
 
 ---
 

@@ -32,10 +32,10 @@ on:
           - KowSU
           - KernelSU-Next
           - KernelSU-Official
-          - ReSukiSU
+          - BakaSU
           - KernelSU-XX
-      resukisu_hook_mode:
-        description: 'ReSukiSU Hook Mode'
+      bakasu_hook_mode:
+        description: 'BakaSU Hook Mode'
         required: true
         default: 'manual'
         type: choice
@@ -305,7 +305,7 @@ jobs:
               [[ "$variant" =~ ^(all|KowSU)$ ]] && add_variant KowSU
               [[ "$variant" =~ ^(all|KernelSU-Next)$ ]] && add_variant KernelSU-Next
               [[ "$variant" =~ ^(all|KernelSU-Official)$ ]] && add_variant KernelSU-Official
-              [[ "$variant" =~ ^(all|ReSukiSU)$ ]] && add_variant ReSukiSU
+              [[ "$variant" =~ ^(all|BakaSU)$ ]] && add_variant BakaSU
               [[ "$variant" =~ ^(all|KernelSU-XX)$ ]] && add_variant KernelSU-XX
             done
           done < /tmp/kvs.txt
@@ -345,7 +345,7 @@ jobs:
       build_timestamp: ${{ needs.setup.outputs.build_timestamp }}
       build_user: ${{ needs.setup.outputs.build_user }}
       build_host: ${{ needs.setup.outputs.build_host }}
-      resukisu_hook_mode: ${{ inputs.resukisu_hook_mode }}
+      bakasu_hook_mode: ${{ inputs.bakasu_hook_mode }}
       kernelsu_xx_hook_mode: ${{ inputs.kernelsu_xx_hook_mode }}
       kernelsu_xx_kpatch_compat: ${{ inputs.kernelsu_xx_kpatch_compat }}
       ksu_debug: ${{ inputs.ksu_debug }}
@@ -602,7 +602,7 @@ jobs:
           ksu_line KowSU kowsu "$(cat commit_info/kowsu_ksu_repo 2>/dev/null)" commit_info/kowsu_ksu_commit
           ksu_line KernelSU-Next kernelsu_next "$(cat commit_info/kernelsu_next_ksu_repo 2>/dev/null)" commit_info/kernelsu_next_ksu_commit
           ksu_line KernelSU-Official kernelsu_official "$(cat commit_info/kernelsu_official_ksu_repo 2>/dev/null)" commit_info/kernelsu_official_ksu_commit
-          ksu_line ReSukiSU resukisu "$(cat commit_info/resukisu_ksu_repo 2>/dev/null)" commit_info/resukisu_ksu_commit
+          ksu_line BakaSU bakasu "$(cat commit_info/bakasu_ksu_repo 2>/dev/null)" commit_info/bakasu_ksu_commit
           ksu_line KernelSU-XX kernelsu_xx "$(cat commit_info/kernelsu_xx_ksu_repo 2>/dev/null)" commit_info/kernelsu_xx_ksu_commit
 
       - name: Publish Release
@@ -616,7 +616,7 @@ jobs:
             ${{ steps.ksu_info.outputs.kowsu }}
             ${{ steps.ksu_info.outputs.kernelsu_next }}
             ${{ steps.ksu_info.outputs.kernelsu_official }}
-            ${{ steps.ksu_info.outputs.resukisu }}
+            ${{ steps.ksu_info.outputs.bakasu }}
             ${{ steps.ksu_info.outputs.kernelsu_xx }}
             ${{ steps.ksu_info.outputs.susfs_url && format('- **SUSFS4KSU**: [{0}]({1}) {2}', steps.ksu_info.outputs.susfs_commit, steps.ksu_info.outputs.susfs_url, steps.ksu_info.outputs.susfs_date) || '' }}
             ${{ steps.ksu_info.outputs.rekernel_line }}
