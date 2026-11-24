@@ -57,7 +57,7 @@ on:
       kernelsu_xx_branch:
         required: false
         type: string
-        default: 'backslashxx/KernelSU:master'
+        default: 'midori01/KernelSU:xx~5'
       resukisu_hook_mode:
         required: false
         type: string
@@ -312,8 +312,8 @@ jobs:
             KernelSU-XX) SPEC="${{ inputs.kernelsu_xx_branch }}" ;;
           esac
           IFS=':' read -r REPO BRANCH <<< "$SPEC"
-          echo "REPO=$REPO" >> $GITHUB_ENV
-          git clone --branch "${BRANCH}" "https://github.com/${REPO}.git" KernelSU
+          git clone --branch "${BRANCH%%~*}" "https://github.com/${REPO}.git" KernelSU
+          [ "$BRANCH" = "${BRANCH%%~*}" ] || git -C KernelSU checkout -q "$BRANCH"
           bash "${{ github.workspace }}/.github/scripts/setup_ksu.sh"
           ln -sf ../KernelSU/kernel drivers/kernelsu
           grep -q "kernelsu" drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
@@ -341,11 +341,10 @@ jobs:
               kp resuki~1
               ;;
             KernelSU-XX)
+              kp xx~3
               kp xx~1
               ;;
           esac
-          sed -i "s/strscpy(cmd.name, \"[^\"]*\", sizeof(cmd.name));/strscpy(cmd.name, \"$(echo "$REPO" | cut -d'/' -f1)\", sizeof(cmd.name));/" KernelSU/kernel/supercall/dispatch.c
-          grep -Fq "strscpy(cmd.name, \"${REPO%%/*}\", sizeof(cmd.name));" KernelSU/kernel/supercall/dispatch.c
 
       - name: Setup SUSFS
         if: inputs.use_susfs
