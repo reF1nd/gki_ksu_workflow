@@ -301,6 +301,7 @@ jobs:
           done
 
       - name: Setup KernelSU
+        if: inputs.variant != 'None'
         working-directory: kernel_workspace/common
         run: |
           mkdir -p commit_info
@@ -320,7 +321,7 @@ jobs:
           grep -q "drivers/kernelsu/Kconfig" drivers/Kconfig || sed -i '/endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
       - name: Setup Extra Features and Fixes
-        if: inputs.use_extra_features
+        if: inputs.use_extra_features && inputs.variant != 'None'
         working-directory: kernel_workspace/common
         run: |
           kp() { curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/kp.patch" "https://github.com/midori01/KernelSU/commit/$1.patch" && patch -p1 -d KernelSU < "$RUNNER_TEMP/kp.patch"; }
@@ -347,7 +348,7 @@ jobs:
           esac
 
       - name: Setup SUSFS
-        if: inputs.use_susfs
+        if: inputs.use_susfs && inputs.variant != 'None'
         working-directory: kernel_workspace/common
         env:
           SUSFS_DIR: ${{ github.workspace }}/susfs4ksu
@@ -442,7 +443,6 @@ jobs:
           REKERNEL_TAG=$(git -C "$REKERNEL_DIR" describe --tags $(git -C "$REKERNEL_DIR" rev-list --tags -n 1)) && git -C "$REKERNEL_DIR" checkout "tags/$REKERNEL_TAG"
           REKERNEL_X_TAG=$(git -C "$REKERNEL_X_DIR" describe --tags $(git -C "$REKERNEL_X_DIR" rev-list --tags -n 1)) && git -C "$REKERNEL_X_DIR" checkout "tags/$REKERNEL_X_TAG"
           cp -r "$REKERNEL_DIR"/LKM-Source drivers/rekernel
-          sed -i 's/depends on MODULES/depends on KSU/' drivers/rekernel/Kconfig
           sed -i 's/obj-m := rekernel.o/obj-$(CONFIG_REKERNEL) += rekernel.o/' drivers/rekernel/Makefile
           echo 'obj-$(CONFIG_REKERNEL) += rekernel/' >> drivers/Makefile
           grep -q "drivers/rekernel/Kconfig" drivers/Kconfig || sed -i '/endmenu/i source "drivers/rekernel/Kconfig"' drivers/Kconfig
@@ -519,7 +519,7 @@ jobs:
             final_klv="${{ inputs.kernel_localversion }}"
             [[ "$final_klv" == -* ]] || final_klv="-$final_klv"
           else
-            suffix="-ksu${{ inputs.use_susfs && '-sus' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_nomount && '-nomount' || '' }}"
+            suffix="${{ inputs.variant != 'None' && '-ksu' || '' }}${{ inputs.use_susfs && '-sus' || '' }}${{ inputs.use_adios && inputs.kernel_version != '6.1' && '-adios' || '' }}${{ inputs.use_droidspaces && '-ds' || '' }}${{ inputs.use_nomount && '-nomount' || '' }}"
             kmi=$(sed -nE 's/^[[:space:]]*KMI_GENERATION=([0-9]+).*$/\1/p' build.config.constants build.config.common 2>/dev/null | head -n 1 || true)
             final_klv="-${{ steps.cfg.outputs.android_version }}${kmi:+-$kmi}$suffix"
           fi
@@ -557,7 +557,7 @@ jobs:
           echo "${CVE_43499_FIXED:-false}" > "$COMMIT_DIR/cve_43499_fixed_${{ inputs.kernel_version }}.${{ inputs.sub_level }}"
           echo "${CVE_64560_FIXED:-false}" > "$COMMIT_DIR/cve_64560_fixed_${{ inputs.kernel_version }}.${{ inputs.sub_level }}"
           echo "${CVE_98260_FIXED:-false}" > "$COMMIT_DIR/cve_98260_fixed_${{ inputs.kernel_version }}.${{ inputs.sub_level }}"
-          cd KernelSU
+          [ "${{ inputs.variant }}" = "None" ] || cd KernelSU
           save_ksu_commit() {
             git rev-parse HEAD > "$COMMIT_DIR/${1}_ksu_commit"
             git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M %z' HEAD > "$COMMIT_DIR/${1}_ksu_date"
@@ -711,7 +711,7 @@ jobs:
         run: |
           IMAGE="common/out/arch/arm64/boot/Image"
           [ -f "$IMAGE" ] || { echo "Binary Missing!"; exit 1; }
-          ZIP_NAME="${{ inputs.variant }}_Kernel-${{ inputs.kernel_version }}.${{ steps.cfg.outputs.sub_level }}${{ steps.cfg.outputs.r_suffix }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}${{ env.NM_SUFFIX }}.zip"
+          ZIP_NAME="${{ inputs.variant == 'None' && 'NoKSU' || inputs.variant }}_Kernel-${{ inputs.kernel_version }}.${{ steps.cfg.outputs.sub_level }}${{ steps.cfg.outputs.r_suffix }}${{ env.SUSFS_SUFFIX }}${{ env.DS_SUFFIX }}${{ env.ADIOS_SUFFIX }}${{ env.ZRAM_SUFFIX }}${{ env.NM_SUFFIX }}.zip"
           git clone --depth 1 --branch ${{ steps.cfg.outputs.anykernel_branch }} https://github.com/midori01/AnyKernel3 anykernel
           cp "$IMAGE" anykernel/
           cd anykernel && rm -rf .git && zip -r9 "../$ZIP_NAME" *

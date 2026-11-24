@@ -34,6 +34,7 @@ on:
           - KernelSU-Official
           - BakaSU
           - KernelSU-XX
+          - None
       bakasu_hook_mode:
         description: 'BakaSU Hook Mode'
         required: true
@@ -169,7 +170,7 @@ jobs:
       kernel_version: ${{ inputs.kernel_version }}
 
   sync_susfs:
-    if: inputs.sync_upstream && inputs.enable_susfs
+    if: inputs.sync_upstream && inputs.enable_susfs && inputs.ksu_variant != 'None'
     uses: ./.github/workflows/sync-susfs.yml
     with:
       kernel_version: ${{ inputs.kernel_version }}
@@ -298,7 +299,7 @@ jobs:
                 local ds="false"
                 local sus="false"
                 [ "${{ inputs.use_droidspaces }}" = "true" ] && ds="true"
-                [ "${{ inputs.enable_susfs }}" = "true" ] && sus="true"
+                [ "${{ inputs.enable_susfs }}" = "true" ] && [ "$v" != "None" ] && sus="true"
                 matrix=$(echo "$matrix" | jq -c --arg kv "$kv" --arg sub_level "$sub_level" --arg variant "$v" --argjson ds "$ds" --argjson sus "$sus" '.include += [{"kernel_version":$kv,"sub_level":$sub_level,"variant":$variant,"droidspaces":$ds,"susfs":$sus}]')
               }
 
@@ -307,6 +308,7 @@ jobs:
               [[ "$variant" =~ ^(all|KernelSU-Official)$ ]] && add_variant KernelSU-Official
               [[ "$variant" =~ ^(all|BakaSU)$ ]] && add_variant BakaSU
               [[ "$variant" =~ ^(all|KernelSU-XX)$ ]] && add_variant KernelSU-XX
+              [ "$variant" = "None" ] && add_variant None
             done
           done < /tmp/kvs.txt
 
@@ -444,6 +446,7 @@ jobs:
       # Companion modules and apps are linked from the release body instead of
       # being re-uploaded as assets, so each link points at its upstream download.
       - name: Resolve KSU Toolkit Module Link
+        if: inputs.ksu_variant != 'None'
         run: |
           link=""
           url=$(curl -sL "https://nightly.link/backslashxx/ksu_toolkit/workflows/module/master?preview" | grep -oP 'https://nightly\.link/backslashxx/ksu_toolkit/workflows/module/master/ksu_toolkit-\d+\.zip' | head -n 1 || true)
@@ -453,7 +456,7 @@ jobs:
           echo "TOOLKIT_LINK=$link" >> $GITHUB_ENV
 
       - name: Resolve SUSFS Module Link
-        if: inputs.enable_susfs == true
+        if: inputs.enable_susfs == true && inputs.ksu_variant != 'None'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -624,7 +627,7 @@ jobs:
             ${{ steps.ksu_info.outputs.vpnhide_line }}
             ${{ steps.ksu_info.outputs.nomount_line }}
             ${{ steps.ksu_info.outputs.fgetpriority_line }}
-            - **Manager**: Use the manager provided by the selected KernelSU upstream
+            - **Manager**: ${{ inputs.ksu_variant == 'None' && 'None (KernelSU is not built in)' || 'Use the manager provided by the selected KernelSU upstream' }}
             > **Spoofed Kernel Build Info**
             ${{ env.RELEASE_UNAME }}
             > - **Time**: `${{ needs.setup.outputs.build_timestamp }}`
