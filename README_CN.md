@@ -106,7 +106,7 @@
 | **内核版本** | 选择 `6.1`、`6.6`、`6.12` 或 `all` 来编译单个或全部内核版本。子版本、修订版本、编译器与 Rust 配置均从集中配置中自动解析。 |
 | **源码镜像** | 支持在 Google 官方 AOSP 镜像与自建镜像之间进行选择，用于内核源码和工具链下载。 |
 | **SUSFS 模块** | 当启用 SUSFS 时，自动获取最新的 [susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module) 并在发布说明中附上下载链接。单个 `susfs_commit` 输入控制所有变体的 SUSFS 版本。 |
-| **KSU 工具箱** | 自动从 nightly.link 获取最新的 [ksu_toolkit](https://github.com/backslashxx/ksu_toolkit) 模块，并在发布说明中附上下载链接。 |
+| **KSU 工具箱** | 内核侧启用工具箱接口（对应 backslashxx 的 [ksu_toolkit](https://github.com/backslashxx/ksu_toolkit)）；由于上游仓库已删除，发布说明中不再附带独立模块链接。 |
 | **Droidspaces** | 通过 [Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS) 提供容器支持 — SYSVIPC、IPC_NS、PID_NS、DEVTMPFS、NTSync 与网络。按变体通过 `use_droidspaces` 开关控制。 |
 | **Re:Kernel(-X)** | 集成的 [Re:Kernel](https://github.com/Sakion-Team/Re-Kernel) 与 [Re:Kernel-X](https://github.com/myflavor/ReKernel-X) 模块直接编译进内核。提供 tombstone 冻结恢复、网络触发解冻与 binder 异步清理。通过 `use_rekernel` 开关控制。 |
 | **VPNHide Next** | 通过树内 kpatch（`CONFIG_VPNHIDE=y`）集成 [VPNHide Next](https://github.com/soranerai/vpnhide_next_backend)，在内核层隐藏 VPN 网络接口、路由规则和套接字描述符，无需依赖动态 LKM。在发布说明中附上配套 `vpnhide-bridge.zip` 模块与管理器 APK（`vpnhide.apk`）的上游发布下载链接。通过 `use_vpnhide` 开关控制。 |
